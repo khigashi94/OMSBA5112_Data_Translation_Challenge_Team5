@@ -1,5 +1,10 @@
 # OMSBA5112_Data_Translation_Challenge_Team5
 
+Group 5:
+  Vishaal Diwan
+  Kristen Higashi
+  Feifei Jiang
+  Lynna Tran
 
 
 ANALYSIS
