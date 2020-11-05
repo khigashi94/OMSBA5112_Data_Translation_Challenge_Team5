@@ -21,8 +21,8 @@ BUSINESS PROBLEM
   square meters). 
 
 
-ANALYSIS
 
+ANALYSIS
 
   ACME has provided you with access to the Ghana Living Standard Survey 4 from 1998/99, including all the documentation that comes with the survey. The data files are 
   in Stata format and contain the raw data from Ghana Statistical Service, so expect a fair number of data issues. Not all the data are equally relevant to your work.
@@ -32,8 +32,8 @@ ANALYSIS
   aggregates is also provided. 
 
 
-COMMUNICATION
 
+COMMUNICATION
 
 Memorandum:
   Write a brief (500 words or less) summary of your findings in standard memorandum format based on your analysis. ACME's board is not interested in the statistical
