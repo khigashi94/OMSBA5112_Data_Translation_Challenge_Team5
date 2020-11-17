@@ -1,12 +1,14 @@
 
-
-
-
 library(tidyverse)
 library(here)
 library(haven)
 
 
+
+
+
+###### DATA GATHER ######
+#########################
 SEC1 <- read_dta("sec1.dta")
   SEC1$new_PID <- paste(SEC1$clust, SEC1$nh, SEC1$pid, sep = "_" )
   SEC1$new_HHID <- paste(SEC1$clust, SEC1$nh, sep = "_" )
@@ -50,9 +52,16 @@ SEC1 <- read_dta("sec1.dta")
     SEC12A1$new_HHID <-  paste(SEC12A1$clust, SEC12A1$nh, sep = "_" )
       
 
+    
+    
+    
+    
 ###### JOINS ######
+###################
 occupation <- left_join(SEC4B, SEC4H, by = "new_PID")
-credit_assets <- left_join(SEC7, 
+
+    
+  credit_assets <- left_join(SEC7, 
                            left_join(SEC12A1
                                      , left_join(SEC12A2
                                                  , left_join(SEC12B, SEC12C
@@ -69,7 +78,7 @@ credit_assets <- left_join(SEC7,
 
 
 
-by_hh <- left_join(SEC7, SEC12A2, by = "new_HHID")
+
 ## Respondent IDs ##
 SEC6 <- read_dta("sec6.dta")
 
