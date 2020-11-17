@@ -38,11 +38,15 @@ level_study$new_PID <- paste(level_study$clust, level_study$nh, level_study$pid,
 
 ##time going to school 
 time_spent_going_school <- ed_general%>%  #time spend going to school *will have to combine hours and minutes into one variable*
-  select(nh, pid,  s2aq5a, s2aq5b)
+  select(clust, nh, pid,  s2aq5a, s2aq5b)
 
 time_spent_going_school_combined <- ed_general%>%  #time spend going to school *will have to combine hours and minutes into one variable*
-  select(nh, pid,  s2aq5a , s2aq5b) %>%
-  mutate(s2aq5a * 60)
+  select(clust, nh, pid,  s2aq5a , s2aq5b) %>%
+  filter(s2aq5a != 99 | s2aq5b != 99) %>%
+  mutate(timetotals = (s2aq5a * 60) + s2aq5b)
+
+
+time_spent_going_school_combined$new_PID <- paste(time_spent_going_school_combined$clust, time_spent_going_school_combined$nh, time_spent_going_school_combined$pid, sep = "_" )
 
 ##Total educational expenses
 educ_expenses <- ed_general%>%
