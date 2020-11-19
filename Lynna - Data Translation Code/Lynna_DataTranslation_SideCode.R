@@ -79,3 +79,35 @@ write_ghana <- ed_literacy %>%
 
 
 write_ghana$new_PID <- paste(write_ghana$clust, write_ghana$nh, write_ghana$pid, sep = "_" )
+
+
+
+
+##comparing profit to parents_e
+profit_parents_df<- left_join(AGG2, parents_ed, by = "new_HHID" )
+
+##profits_parents_xnulls<-  filter(profit_parents_df,totemp != 0.00 )
+
+
+
+profit_parents_lm <- lm(profit_parents_df, formula =  totemp ~ s1q15 + s1q19)
+summary(profit_parents_lm)
+
+##comparing profit to level of study
+profit_levelstudy_df<- left_join(AGG1, level_study, by = "new_HHID" )
+profit_levelstudy_lm <- lm(profit_levelstudy_df, formula =  totemp ~ s2aq2 + s2aq3)
+summary(profit_levelstudy_lm)
+
+
+##comparing profit to time spent going to school 
+profit_timetoschool_df<- left_join(AGG1, time_spent_going_school, by = "new_HHID" )
+profit_timetoschool_lm <- lm(profit_timetoschool_df, formula =  totemp ~ timetotals)
+summary(profit_timetoschool_lm)
+
+
+
+##comparing profit to education expenses 
+profit_eduexpenses_df<- left_join(AGG1, educ_expenses_totals_by_household, by = "new_HHID" )
+profit_eduexpenses__lm <- lm(profit_eduexpenses_df, formula =  totemp ~ household_totals)
+summary(profit_eduexpenses__lm)
+

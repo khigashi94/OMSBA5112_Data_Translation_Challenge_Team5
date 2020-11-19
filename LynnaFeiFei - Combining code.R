@@ -25,8 +25,8 @@ agri_merge$new_HHID <- paste(agri_merge$clust.x, agri_merge$nh, sep="_")
 
 ##run lynnas code 
 
-lf_df_combined <- full_join(plot_by_household, profits_parents_xnulls, by = "new_HHID")
-lf_df_lm <- lm(lf_df_combined, formula = totemp ~ household_land_size_totals + s1q15 + s1q19)
+lf_df_combined <- full_join(plot_by_household, profit_parents_df, by = "new_HHID")
+lf_df_lm <- lm(lf_df_combined, formula = agri2c ~ household_land_size_totals + s1q15 + s1q19)
 summary(lf_df_lm)
 
 profit_timetoschool_lm <- lm(profit_timetoschool_df, formula =  totemp ~ timetotals)
