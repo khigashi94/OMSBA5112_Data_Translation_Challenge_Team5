@@ -122,14 +122,19 @@ income_assets_ <- left_join(HH_tot_inc
                               , left_join(agg_inc
                                           , left_join(non_farm_inc
                                                       , left_join(loans
-                                                                  , left_join(savings, assets, by = "new_HHID")
+                                                                  , left_join (loan_credit
+                                                                               , left_join(savings, assets, by = "new_HHID")
                                                                   , by = "new_HHID")
                                                       , by = "new_HHID")
                                           , by = "new_HHID")
                               , by = "new_HHID")
+                            , by = "new_HHID")
                 
             
   
+
+inc_exp <- left_join(income_assets_, agg_expense, by = "new_HHID")
+
 
 
 #### COMPARE INDIVIDUAL WORK WITH INDIVIDUAL INCOME - Can break into hourly income
@@ -137,8 +142,84 @@ main_occup <- transmute(SEC4B, new_PID, new_HHID, same_work = s4bq1, main_work =
                           main_pay = s4bq6a, pay_time_unit = s4bq6b, main_timework = s4bq7a, main_time_unit = s4bq7b, 
                           emp_status = s4bq8,rent_nosub = s4bq17a, rent_nosub_unit = s4bq17b, transp_subsidy = s4bq18, 
                           val_trans_subs = s4bq19a, val_trans_sub_unit = s4bq19b) %>%
+  
     filter(main_work == 111 | main_work == 112 | main_work == "6-0" | main_work =="6-1" | main_work == "6-2")
   
-  
-  
+
+
+
+
+##### reg_totpay
+
+reg_totpay <- lm(totemp ~ savings_val + sum_aggr_inc + assets_curr_val +loan_amt +loan_paid, data = income_assets_)
+
+test_reg <- lm(totemp ~ savings_val, data = income_assets_)
+
+hist(rstandard(reg_totpay), # normal distribution of errors?
+     xlab = "Standardized residuals")
+
+plot(fitted(reg_totpay), resid(reg_totpay),
+     xlab = "Fitted", ylab = "Residuals",
+     abline(h = 0, col = "blue"))
+
+
+
+
+
+##### reg_main_occ
+reg_exp_totemp <- lm(totemp ~ expland + expcrop + expliv, data = inc_exp)
+
+hist(rstandard(reg_exp_totemp), # normal distribution of errors?
+     xlab = "Standardized residuals")
+
+plot(fitted(reg_exp_totemp), resid(reg_exp_totemp),
+     xlab = "Fitted", ylab = "Residuals",
+     abline(h = 0, col = "blue"))
+
+
+
+
+
+##### reg_agginc
+reg_agginc <- lm(sum_aggr_inc ~expland + expcrop + expliv, data = inc_exp) 
+
+hist(rstandard(reg_agginc), # normal distribution of errors?
+     xlab = "Standardized residuals")
+
+plot(fitted(reg_agginc), resid(reg_agginc),
+     xlab = "Fitted", ylab = "Residuals",
+     abline(h = 0, col = "blue"))
+
+
+
+
+
+##### reg_agginc_loan
+reg_agginc_loan <- lm(sum_aggr_inc ~ loan_amt + savings_val + assets_curr_val + expcrop + expliv, data = inc_exp) 
+
+hist(rstandard(reg_agginc_loan), # normal distribution of errors?
+     xlab = "Standardized residuals")
+
+plot(fitted(reg_agginc_loan), resid(reg_agginc_loan),
+     xlab = "Fitted", ylab = "Residuals",
+     abline(h = 0, col = "blue"))
+
+
+
+
+
+
+##### reg_nonagginc_loan
+reg_nonagginc_loan <- lm(sum_nonagg_inc ~ loan_amt + savings_val + assets_curr_val, data = inc_exp) 
+
+hist(rstandard(reg_nonagginc_loan), # normal distribution of errors?
+     xlab = "Standardized residuals")
+
+plot(fitted(reg_nonagginc_loan), resid(reg_nonagginc_loan),
+     xlab = "Fitted", ylab = "Residuals",
+     abline(h = 0, col = "blue"))
+
+
+
+
 
