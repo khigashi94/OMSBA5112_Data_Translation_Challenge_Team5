@@ -1,8 +1,7 @@
 # final dataset 
 
 
-Final_df = left_join(educ_variables, income_assets_distinct, by = "new_HHID")%>%
-  ##left_join(main_occup, by = "new_HHID")
+Final_df <- left_join(educ_variables, income_assets_distinct, by = "new_HHID")%>%
  left_join(agri_vars_distinct , by = "new_HHID")
 
 colnames(Final_df)
@@ -25,19 +24,21 @@ summary(final_lm)
 ##highest_qualification_avgs  
 ##assets_paid 
 
+
+##highest_qualification_avgs 
 highest_qualification_profit_lm <- lm(Final_df, formula = sum_aggr_inc ~ highest_qualification_avgs)
 
 summary(highest_qualification_profit_lm)
 
-
-hist(rstandard(highest_qualification_profit_lm ), # normal distribution of errors?
-     xlab = "Standardized residuals")
+hist(rstandard(highest_qualification_profit_lm ), 
+     xlab = "Standardized residuals", main = 'Standardized Residuals of Average
+     Highest Qualification' )
 
 plot(fitted(highest_qualification_profit_lm ), resid(highest_qualification_profit_lm ),
      xlab = "Fitted", ylab = "Residuals",
-      main = 'Fitted vs Residuals for Average Highest Qualifications in Household ',
+      main = 'Fitted vs Residuals for Average Highest 
+     Qualifications in Household ',
      abline(h = 0, col = "blue"))
-
 
 ##dummies /specs 
 
@@ -46,14 +47,13 @@ highest_qualification_profit_poly <- lm(Final_df, formula = sum_aggr_inc ~ highe
                                         + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid + assets_curr_val +
                                           total_land_size_ropes_2_acres)
 
-summary(highest_qualification_profit_poly)
-
 
 ggplot(data = Final_df, aes(x = I(highest_qualification_avgs ^2), y = sum_aggr_inc)) +
   geom_smooth() +
-  xlab("qualification Squared") +
-  ylab(" profits") +
-  ggtitle("title")
+  xlab("Average of Qualifications Squared") +
+  ylab(" Profits by household") +
+  ggtitle("Average Qualifications by 
+          Profits per Household -- Polynomial")
 
 ##2 stars 
 ##highest_level_avgs
@@ -61,6 +61,38 @@ ggplot(data = Final_df, aes(x = I(highest_qualification_avgs ^2), y = sum_aggr_i
 
 ##1 stars 
 ##hh_educ_expenses_avg 
+
+avg_educexpenses_profit_lm <- lm(Final_df, formula = sum_aggr_inc ~  hh_educ_expenses_avg)
+
+summary(avg_educexpenses_profit_lm)
+
+hist(rstandard( highest_educexpenses_profit_lm), 
+     xlab = "Standardized residuals", main = 'Standardized Residuals of Average
+     Education Expenses' )
+
+plot(fitted(avg_educexpenses_profit_lm), resid(avg_educexpenses_profit_lm),
+     xlab = "Fitted", ylab = "Residuals",
+     main = 'Fitted vs Residuals for Average Education Expenses
+     in Household ',
+     abline(h = 0, col = "blue"))
+
+##dummies /specs 
+
+avg_educexpenses_profit_poly <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
+                                        + highest_qualification_avgs + hh_educ_expenses_avg + I(hh_educ_expenses_avg^2) +
+                                     totemp + loan_amt + owe_money
+                                        + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid + assets_curr_val +
+                                          total_land_size_ropes_2_acres)
+
+
+ggplot(data = Final_df, aes(x = I(hh_educ_expenses_avg^2), y = sum_aggr_inc)) +
+  geom_smooth() +
+  xlab("Average of Qualifications Squared") +
+  ylab(" Profits by household") +
+  ggtitle("Average Education Expenses per household
+           -- Polynomial")
+
+
 ##owe_money 
 #savings_val    
 ##total_land_size_ropes_2_acres
