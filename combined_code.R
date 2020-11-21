@@ -1,4 +1,4 @@
-# feijiang_dtc_code.R
+MAIN CODE RUN FIRST 
 # Feifei Jiang
 # Agriculture Land and Plot variables in data.pdf
 # How much land that household has in acres? What crops are growing?
@@ -13,9 +13,9 @@ library(ggplot2)
 library(dplyr)
 library(magrittr)
 
-
 ### ------ agriculture land ------ ###
 ### ------------------------------ ###
+
 agri_land <- read_dta('data/glss4_new/sec8a1.dta') 
 agri_land$new_HHID <- paste(agri_land$clust, agri_land$nh, sep="_") 
 land <- select(agri_land, new_HHID, s8aq1, s8aq3, s8aq4, s8aq5) 
@@ -31,7 +31,7 @@ land_owned <- land$s8aq4        # convert land to acres
 ### -------------------------------------- ###
 agri_plot <- read_dta('data/glss4_new/sec8b.dta') 
 agri_plot$new_HHID <- paste(agri_plot$clust, agri_plot$nh, sep="_")
-plot <- select(agri_plot, new_HHID, s8bq4a, s8bq4b, s8bq5, s8bq12a, s8bq12b) 
+plot <- select(agri_plot, new_HHID, s8bq4a, s8bq4b, s8bq5) 
 plot$plot_size_ropes_2_acres = ifelse(plot$s8bq4b %in% c("3") , plot$s8bq4a * 0.1, plot$s8bq4a * 1)
 
 # variables for conversion
@@ -46,12 +46,45 @@ crop1_count <-  count(crop1, vars = s8bq12a)
 
 Cassava_crops_growing_one <- plot %>% 
   filter(s8bq12a == 18) %>% 
-  select(new_HHID, s8bq12a)
+  select(new_HHID, s8bq12a) %>%
+  rename(cassava = s8bq12a )
+
+cassava_distinct <- distinct(Cassava_crops_growing_one, new_HHID,cassava  )
 
 Maize_crops_growing_three <- plot %>% 
   filter(s8bq12a == 22) %>% 
-  select(new_HHID, s8bq12a)
+  select(new_HHID, s8bq12a)  %>%
+  rename(maize = s8bq12a )
 
+
+crop1_combined <- full_join(cassava_distinct, Maize_crops_growing_three, by = 'new_HHID')
+
+
+# figure out what crops2 got planted the most
+crop2 <- plot %>%
+  select(new_HHID, s8bq12b) %>%
+  group_by(s8bq12b)
+crop2_count <-  count(crop2, s8bq12b)
+
+
+Unknown_crops_growing_0 <- plot %>%
+  filter(s8bq12b == 0) %>%
+  select(new_HHID, s8bq12b) %>%
+  rename(unknown = s8bq12b )
+
+
+Pawpaw_crops_growing_three <- plot %>%
+  filter(s8bq12b == 36) %>%
+  select(new_HHID, s8bq12b) %>%
+  rename(pawpaw = s8bq12b )
+
+crop2_combined <- full_join(Unknown_crops_growing_0 , Pawpaw_crops_growing_three, by = 'new_HHID')
+
+
+crop_combined <- full_join(crop1_combined , crop2_combined, by = 'new_HHID')
+
+
+crop_combined_distinct <- distinct(crop_combined,cassava, maize, unknown, pawpaw)
 
 ### ----------------------------------------------------------------- ###
 ### ------ merged agriculture land + plot + agriculture income ------ ###
@@ -60,28 +93,30 @@ agri_merge <- left_join(land, plot, by = "new_HHID", all.y = TRUE) %>%
   group_by(new_HHID) %>%
   rename(HH_own_any_land = s8aq1, 
          was_land_bought_or_rented = s8aq5,
-         farm_owned_by_HH_member = s8bq5,
-         crop1_growing = s8bq12a,
-         crop2_growing = s8bq12b) %>% 
+         farm_owned_by_HH_member = s8bq5) %>% 
   summarize(HH_own_any_land, 
             was_land_bought_or_rented, 
             farm_owned_by_HH_member, 
-            crop1_growing, 
-            crop2_growing, 
             total_land_size_ropes_2_acres = sum(land_size_ropes_2_acres), 
             total_plot_size_ropes_2_acres = sum(plot_size_ropes_2_acres))
 
-##Lynna's code
+agri_merge_distinct <- distinct(agri_merge,HH_own_any_land , was_land_bought_or_rented, total_land_size_ropes_2_acres, total_plot_size_ropes_2_acres )
+
+agri_vars <- left_join(agri_merge_distinct, crop_combined_distinct, by =  "new_HHID" )
+
+colnames(agri_vars )
+
+agri_vars_distinct <- distinct(agri_vars, HH_own_any_land , was_land_bought_or_rented, total_land_size_ropes_2_acres, total_plot_size_ropes_2_acres,
+                               cassava, maize, unknown, pawpaw)
+
+
+
 
 #Lynna Tran
 
 # Lynna: Education in Data.pdf. 
 # Page 1. Household size and education attainment per person, 
 # per household. How much education that household has?
-
-library(tidyverse)
-library(haven)
-library(dplyr)
 
 
 #SEC 1 - Household roster
@@ -152,7 +187,7 @@ level_study_household_avgs <- full_join(level_study_household, level_study_hh_co
 time_spent_going_school <- ed_general%>%  
   select(clust, nh, pid,s2aq5a , s2aq5b,new_PID, new_HHID) %>%
   filter(s2aq5a != 99 | s2aq5b != 99) %>%
-  mutate(ptimetotals = (s2aq5a * 60) + s2aq5b)## %>%
+  mutate(ptimetotals = (s2aq5a * 60) + s2aq5b)
 
 ##household count of how many individuals in the house has records for time spent going to school 
 time_spent_going_school_hh_count <- count(time_spent_going_school, vars = new_HHID) %>%
@@ -228,11 +263,6 @@ profit_educ_lm <- lm(profit_educ_df, formula = agri2c ~ hh_time_spent_going_to_s
 summary(profit_educ_lm)
 
 
-###Kristen code
-
-
-library(tidyverse)
-library(haven)
 
 
 
@@ -300,11 +330,11 @@ AGG12$new_HHID <-paste(AGG12$clust, AGG12$nh, sep = "_" )
 SUBAGG22 <- read_dta("SUBAGG22.dta")%>%
   transmute(new_HHID = paste(SUBAGG22$clust, SUBAGG22$nh, sep = "_" ), expland)
 #crop exp
-SUBAGG23 <- read_dta("SUBAGG23.dta") %>%
+SUBAGG23 <- read_dta("SUBAGG23.dta")%>%
   transmute(new_HHID = paste(SUBAGG23$clust, SUBAGG23$nh, sep = "_" ), expcrop)
 
 #livestock inputs
-SUBAGG24 <- read_dta("SUBAGG24.dta") %>%
+SUBAGG24 <- read_dta("SUBAGG24.dta")%>%
   transmute(new_HHID = paste(SUBAGG24$clust, SUBAGG24$nh, sep = "_" ), expliv)
 
 #######      #######      #######      #######      #######      #######      #######
@@ -362,8 +392,10 @@ income_assets_ <- left_join(HH_tot_inc
                                         , by = "new_HHID")
                             , by = "new_HHID")
 
+colnames(income_assets_)
 
-
+income_assets_distinct <- distinct(income_assets_, new_HHID, sum_aggr_inc , sum_nonagg_inc,  totemp, loan_amt , owe_money,
+                                   loan_paid , savings_val , savings_added , savings_withdrawn , assets_paid , assets_curr_val )
 
 inc_exp <- left_join(income_assets_, agg_expense, by = "new_HHID")
 
@@ -450,6 +482,8 @@ hist(rstandard(reg_nonagginc_loan), # normal distribution of errors?
 plot(fitted(reg_nonagginc_loan), resid(reg_nonagginc_loan),
      xlab = "Fitted", ylab = "Residuals",
      abline(h = 0, col = "blue"))
+
+
 
 
 
