@@ -6,6 +6,7 @@
 # install.packages("tidyverse")
 # install.packages("haven")
 
+
 library(tidyverse)
 library(haven)
 library(ggplot2)
@@ -13,7 +14,6 @@ library(dplyr)
 library(magrittr)
 
 
-### ------------------------------ ###
 ### ------ agriculture land ------ ###
 ### ------------------------------ ###
 agri_land <- read_dta('data/glss4_new/sec8a1.dta') 

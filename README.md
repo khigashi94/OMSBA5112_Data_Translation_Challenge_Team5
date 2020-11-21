@@ -10,6 +10,15 @@ Draft Due: 11/20/20
 Final Report Due: 12/4/20
 
 
+Links:
+
+Google Doc
+https://docs.google.com/document/d/1Z3OKDmIGnSH3Yhwc9lqYOmuhuEn7qeQiOpx1P2J4Fgg/edit?usp=sharing
+
+Google Sheet
+https://docs.google.com/spreadsheets/d/1RjlNC2CimbyxitA_eQ671zYjJq8oWXFzxbWVuYjIygI/edit?usp=sharing
+
+
 
 BUSINESS PROBLEM
 
