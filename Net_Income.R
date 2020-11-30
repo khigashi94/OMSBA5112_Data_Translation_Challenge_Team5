@@ -21,6 +21,39 @@ new_HHIDs_list <- distinct(SEC1, new_HHID, .keep_all=FALSE)
 
 
 
+#################### Individual ########################
+########################################################
+
+# SEC4A: Employment: Screening questions and list of occupations in past 12 months
+
+SEC4B_agr <- read_dta('SEC4B.dta')%>%
+  transmute(new_HHID = paste(SEC4B$clust, SEC4B$nh, sep = "_" ),
+            new_PID = paste(SEC4B$clust, SEC4B$nh, SEC4B$pid, sep = "_" ), 
+            main_job = s4bq4,
+            main_job_inc = s4bq6a,
+            main_job_hrs = s4bq7a,
+            emp_status =s4bq8,
+            employer = s4bq9)%>%
+  filter(main_job == '111' | main_job == '112')
+
+SEC4B_non_agr <- read_dta('SEC4B.dta')%>%
+  transmute(new_HHID = paste(SEC4B$clust, SEC4B$nh, sep = "_" ),
+            new_PID = paste(SEC4B$clust, SEC4B$nh, SEC4B$pid, sep = "_" ), 
+            main_job = s4bq4,
+            main_job_inc = s4bq6a,
+            main_job_hrs = s4bq7a,
+            emp_status =s4bq8,
+            employer = s4bq9)%>%
+  filter(main_job != '111' | main_job != '112')
+
+
+# SEC4B: Employment: Characteristics of the main occupation
+
+
+
+
+
+
 
 #################### Profit ########################
 ####################################################
@@ -74,6 +107,8 @@ SUBAGG16 <- read_dta('SUBAGG16.dta')%>%
 transmute(new_HHID = paste(SUBAGG16$clust, SUBAGG16$nh, sep = "_" ), inc_transformed_crop = trcrpinc)
 
 
+
+## Join all subaggs to create a full "income" table
 income <- new_HHIDs_list%>%
   full_join(AGG1, by = 'new_HHID')%>%
   full_join(AGG2, by = 'new_HHID')%>%
@@ -87,22 +122,6 @@ income <- new_HHIDs_list%>%
   full_join(SUBAGG15, by = 'new_HHID')%>%
   full_join(SUBAGG16, by = 'new_HHID') 
   income[is.na(income)]=0
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
 
 
 
@@ -138,7 +157,7 @@ SUBAGG31 <- read_dta("SUBAGG31.dta")%>%
 
 
 
-
+## join all subaggs to create one expenses table
 expenses <- new_HHIDs_list%>%
   full_join(SUBAGG22, by = 'new_HHID')%>%
   full_join(SUBAGG23, by = 'new_HHID')%>%
@@ -154,15 +173,17 @@ expenses <- new_HHIDs_list%>%
   
 ############## NET INCOME FINAL JOIN AND TABLE #####################
 #####################################################
-
+## Join both income and expense tables, sum across to total net profit
 net_join <- income%>%
   left_join(expenses, by = 'new_HHID')%>%
   mutate(sum_aggr_inc  = rowSums(net_join[,3:16]))
 
+  
+## simplified table listing new_HHID, totemp, and sum_aggr_inc 
 net_inc <- net_join %>%
   transmute(new_HHID, totemp, sum_aggr_inc)
 
-  
+   
 
   
 
