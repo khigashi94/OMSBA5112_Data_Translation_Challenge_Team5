@@ -222,9 +222,13 @@ level_study_household_avgs <- full_join(level_study_household, level_study_hh_co
 ##getting average time a household's individual spends going to school 
 
 ##time values extraction from data files 
-time_spent_going_school <- ed_general%>%  
+time_spent_going_school <- ed_general
+time_spent_going_school[is.na(time_spent_going_school)] <- 0
+
+time_spent_going_school <- time_spent_going_school %>%
   select(s2aq5a , s2aq5b, new_HHID) %>%
   filter(s2aq5a != 99 | s2aq5b != 99) %>%
+  filter(s2aq5a < 24) %>%
   mutate(ptimetotals = (s2aq5a * 60) + s2aq5b)
 
 ##household count of how many individuals in the house has records for time spent going to school 
@@ -244,7 +248,7 @@ time_spent_going_school_averages <- full_join(time_spent_going_school_household 
 
 
 
-##Total educational expenses #####
+######educational expenses #####
 ##average education expense for individual per household 
 
 ##selecting all education expenses columns 
@@ -279,7 +283,7 @@ educ_expenses_household_avgs <- full_join(educ_expenses_totals_household  , educ
   mutate(hh_educ_expenses_avg =  household_expenses_totals /hh_count)
 
 
-##merge 
+############## COMBINED EDUCATION DATASET  #####################
 
 educ_variables <- left_join(time_spent_going_school_averages, level_study_household_avgs, by = "new_HHID") %>%
   left_join(educ_expenses_household_avgs, by = "new_HHID") %>%
@@ -287,6 +291,8 @@ educ_variables <- left_join(time_spent_going_school_averages, level_study_househ
 
 
 educ_variables[is.na(educ_variables)]=0
+
+
 
 
 #################### Profit Load Data########################
@@ -378,6 +384,8 @@ sum_income$new_HHID <- paste(sum_income$clust.x, sum_income$nh.x, sep = "_" )
 
 
 
+
+
 ############## Expenditures #####################
 
 
@@ -435,8 +443,6 @@ sum_expenses$new_HHID <- paste(sum_expenses$clust.x, sum_expenses$nh.x, sep = "_
 
 
 ############## NET INCOME FINAL JOIN AND TABLE #####################
-#####################################################
-
 
 net_join <- left_join(sum_income, sum_expenses, by = 'new_HHID')
 
@@ -451,7 +457,6 @@ profit_join <- net_join %>%
 
 
 ############## COMBINED DATASET  #####################
-#####################################################
 
 Final_df <- left_join(profit_join, educ_variables, by = "new_HHID")%>%
   left_join( agri_merge, by = "new_HHID") %>%
@@ -480,23 +485,25 @@ ggplot(data = Final_df, aes(x = highest_level_avgs, y = sum_profit )) +
   ggtitle("Household Agricultural Profits by
           Average Highest Level of Study ")
 
-
-ggplot(data = Final_df, aes((sum_profit)
-                            , highest) +
-  xlab("Household Argicultural Profits ") +     ##whats the unit of measure here? Everywhere else?
-  ylab("Region") +
-  geom_bar()
-
-
-geom_bar(data = Final_df, mapping =  aes(sum_profit, hh_plot_area), width = 10, na.rm = TRUE)
+###profit by Time Spent going to School 
+ggplot(data = Final_df, aes(x = hh_time_spent_going_to_school_avg, y = log(sum_profit)  )) +
+  geom_bar(stat = "identity", width = 60) + (xlim(0, 450)) + (ylim(0, 2000)) +
+  xlab("Average Time Spent Going to School Daily (in minutes)") +
+  ylab(" Household Agricultural Profits") +
+  ggtitle("Household Agricultural Profits by
+          Average Time Spent Going to School ")
 
 
-######bar graph of profit by highest level of study 
-ggplot(data = Final_df, aes(x = highest_level_avgs, y = sum_profit )) +
-  geom_bar(stat = "identity", width = 1) + (xlim(0,15)) +
-  xlab("highest level of study ") +
-  ylab("Household Agricultural Profits") +
-  ggtitle("")
+###profit by Land Area
+ggplot(data = Final_df, aes(x = total_land_area, y = log(sum_profit)  )) +
+  geom_bar(stat = "identity", width = 25) + (xlim(0, 300)) + (ylim(0, 500)) +
+  xlab('Household Land Area (in Acres') +
+  ylab(" Household Agricultural Profits") +
+  ggtitle("Household Agricultural Profits by
+          Land Area in Acres ")    
+
+
+
 
 
 
@@ -514,18 +521,18 @@ summary(all_variables_lm)
 
 
 ##USING VARIABLES THAT HAS SIGNIFICANT ##
-siginificant_variables_lm <- lm(Final_df, formula = sum_profit ~  highest_level_avgs  + hh_time_spent_going_to_school_avg 
+significant_variables_lm <- lm(Final_df, formula = sum_profit ~  highest_level_avgs  + hh_time_spent_going_to_school_avg 
                                 + total_land_area +  hh_plot_area + cassava + minor_cassava + minor_Plantain 
-                                + State_trading_organisation )
+                                + State_trading_organisation  )
 
-summary(siginificant_variables_lm )
+summary(significant_variables_lm )
 
 
 
 ###land area profit######
 all_variables_per_land_lm <- lm(Final_df, formula = profit_per_land ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
                        + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
-                         cassava + maize + minor_cassava + minor_Plantain
+                         cassava + maize + minor_cassava + minor_Plantain + State_trading_organisation
                        )
 
 summary(all_variables_per_land_lm)
@@ -535,6 +542,7 @@ summary(all_variables_per_land_lm)
 all_variables_per_plot_lm <- lm(Final_df, formula = profit_per_plot ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
                                 + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
                                   cassava + maize + minor_cassava + minor_Plantain
+                                + State_trading_organisation
 )
 
 summary(all_variables_per_plot_lm)
