@@ -7,6 +7,24 @@ library(haven)
 library(dplyr)
 library(magrittr)
 
+############## REGION INFORMATION  #####################
+#####################################################
+
+SEC0A <- read_dta('SEC0A.dta')
+
+clust_info <- SEC0A %>%
+  select("clust" ,"region" ,  "district" ,"eanum"  ) %>%
+  mutate(region_name = case_when(region == 1 ~'Western',
+                                 region == 2 ~'Central',
+                                 region == 3 ~'Greater Accra', 
+                                 region == 4 ~'Eastern',  
+                                 region == 5~'Volta', 
+                                 region == 6~'Ashanti', 
+                                 region ==  7 ~'Brong Ahafo', 
+                                 region == 8 ~'Northern',  
+                                 region == 9~'Upper East', 
+                                 region == 10 ~'Upper West' ))
+
 ### ------ load agriculture data and add primary key  ------ ###
 ### ------------------------------ ###
 
@@ -21,26 +39,15 @@ agri_plot$new_HHID <- paste(agri_plot$clust, agri_plot$nh, sep="_")
 ### ------ agriculture land ------ ###
 ### ------------------------------ ###
 
-##land dataset, converting ropes to acres 
-##land <- select(agri_land, new_HHID, s8aq1, s8aq3, s8aq4, s8aq5) 
-##land$land_size_ropes_2_acres = ifelse(land$s8aq3==3, land$s8aq4 * 0.1, land$s8aq4 * 1)
 
 land <- select(agri_land, new_HHID, s8aq1, s8aq3, s8aq4, s8aq5) %>%
   mutate(total_land_area = ifelse(agri_land$s8aq3==3, agri_land$s8aq4 * 0.1, agri_land$s8aq4 * 1)) %>%
   filter(!is.na(total_land_area))
 
-###might not need this anymore 
-# variables for conversion
-#plot_areas <- land$s8aq3        # unit of measure in acres, poles, ropes, other
-#land_owned <- land$s8aq4        # convert land to acres
-
 
 ### -------------------------------------- ###
 ### ------ agriculture plot details ------ ###
 ### -------------------------------------- ###
-
-# plot <- select(agri_plot, new_HHID, s8bq4a, s8bq4b, s8bq5) 
-# plot$plot_size_ropes_2_acres = ifelse(plot$s8bq4b %in% c("3") , plot$s8bq4a * 0.1, plot$s8bq4a * 1)
 
 
 plot <- select(agri_plot, new_HHID, s8bq4a, s8bq4b, s8bq5)  %>%
@@ -49,33 +56,24 @@ plot <- select(agri_plot, new_HHID, s8bq4a, s8bq4b, s8bq5)  %>%
   mutate(hh_plot_area = sum(plot_area)) %>%
   distinct(hh_plot_area, new_HHID)
 
-# # variables for conversion
-# land_size <- plot$s8bq4a          # convert land to acres
-# unit_of_measure <- plot$s8bq4b    # unit of measure in acres, poles, ropes, other
-
+### -------------------------------------- ###
+### ------ popular crop details ------ ###
+### -------------------------------------- ###
 # figure out what crops got planted the most
 
-crop1 <- agri_plot %>% 
-  select(new_HHID, s8bq12a) %>%
-  count(name = 'count_of_crop', vars = s8bq12a) %>%
-  arrange(desc(count_of_crop))
-  
-
-#top primary crop
-##crop 18 cassava and 22 maize, are most popular (0 was top 2 but it was an unknown variable so it doesnt matter), respectively 
-
-
 Cassava_crops <- agri_plot %>% 
+  filter(s8bq12a == 18) %>% 
   select(new_HHID, s8bq12a) %>%
   mutate(cassava = (s8bq12a == 18))  %>% 
-  filter(!is.na(cassava == TRUE)) %>%
+  filter(cassava == TRUE) %>%
   distinct(cassava,new_HHID)
 
 
 Maize_crops <- agri_plot %>% 
+  filter(s8bq12a == 22) %>% 
   select(new_HHID, s8bq12a)  %>%
   mutate(maize = (s8bq12a == 22))  %>% 
-  filter(!is.na(maize)) %>%
+  filter(maize == TRUE) %>%
   distinct(maize,new_HHID)
 
 
@@ -87,19 +85,21 @@ crop2 <- agri_plot %>%
   arrange(desc(count_of_crop))
 
 
- Cassava_minor_crop<- agri_plot %>%
-   select(new_HHID, s8bq12b) %>%
-   mutate(minor_cassava = (s8bq12b == 18))  %>% 
-   filter(!is.na(minor_cassava)) %>%
-   distinct(minor_cassava,new_HHID)
-   
+Cassava_minor_crop<- agri_plot %>%
+  filter(s8bq12b == 18) %>%
+  select(new_HHID, s8bq12b) %>%
+  mutate(minor_cassava = (s8bq12b == 18))  %>% 
+  filter(minor_cassava == TRUE) %>%
+  distinct(minor_cassava,new_HHID)
 
- Plantain_minor_crop<- agri_plot %>%
-   ##filter(s8bq12b == 06) %>%
-   select(new_HHID, s8bq12b) %>%
-   mutate(minor_Plantain = (s8bq12b == 06))  %>% 
-   filter(!is.na(minor_Plantain)) %>%
-   distinct(minor_Plantain,new_HHID)
+
+Plantain_minor_crop<- agri_plot %>%
+  filter(s8bq12b == 06) %>%
+  select(new_HHID, s8bq12b) %>%
+  mutate(minor_Plantain = (s8bq12b == 06))  %>% 
+  filter(minor_Plantain == TRUE) %>%
+  distinct(minor_Plantain,new_HHID)
+
 
 
 
@@ -107,21 +107,44 @@ crop_combined <- full_join(Cassava_crops , Maize_crops, by = 'new_HHID') %>%
   full_join(Cassava_minor_crop ,by = 'new_HHID') %>%
   full_join(Plantain_minor_crop ,by = 'new_HHID')
 
+crop_combined[is.na(crop_combined)]=0
+
+### -------------------------------------- ###
+### ------ local area characteritics ------ ###
+### -------------------------------------- ###
+SEC8C1 <- read_dta('SEC8C1.dta')
+SEC8C1$new_HHID <- paste(SEC8C1$clust, SEC8C1$nh, sep = "_" )
+
+
+########fix me, working on a local variable#######
+Harvest <- SEC8C1 %>%
+  select(new_HHID, s8cq6) %>%
+  filter(!is.na(s8cq6)) %>% 
+  mutate(market_name = case_when(s8cq6 == 1 ~'Pre-harvest contractor',
+                                 s8cq6 == 2 ~'Farm gate buyer',
+                                 s8cq6 == 3 ~'Market trader', 
+                                 s8cq6 == 4 ~'Consumer',  
+                                 s8cq6 == 5~'State trading organisation', 
+                                 s8cq6 == 6~'Co-operatives'
+  )) %>%
+  pivot_wider(names_from = market_name , values_from = s8cq6, values_fn = list)
+
+
+Harvest_TF <- Harvest %>%
+  mutate(Pre_harvest_contractor = ifelse(is.null('Pre-harvest contractor') == TRUE, FALSE, TRUE)) %>%
+  mutate(farm_gate_buyer = ifelse(is.null('Farm gate buyer') == TRUE, FALSE, TRUE)) %>%
+  mutate(market_trader= ifelse('Market trader' == 'NULL', FALSE, TRUE)) %>%
+  mutate(consumer = ifelse(is.null('Consumer') == TRUE, FALSE, TRUE)) %>%
+  mutate(state_trading_org = ifelse(is.null('State trading organisation') == TRUE, FALSE, TRUE)) %>%
+  mutate(co_op = ifelse(is.null('Co-operatives') == TRUE, FALSE, TRUE)) 
+
+
 
 
 
 ### ----------------------------------------------------------------- ###
 ### ------ merged agriculture land + plot + agriculture income ------ ###
 ### ----------------------------------------------------------------- ###
-# agri_merge <- left_join(land, plot, by = "new_HHID", all.y = TRUE) %>% 
-#   rename(HH_own_any_land = s8aq1, 
-#          was_land_bought_or_rented = s8aq5,
-#          farm_owned_by_HH_member = s8bq5) %>% 
-#   summarize(HH_own_any_land, 
-#             was_land_bought_or_rented, 
-#             farm_owned_by_HH_member, 
-#             total_land_size_ropes_2_acres = sum(land_size_ropes_2_acres), 
-#             total_plot_size_ropes_2_acres = sum(plot_size_ropes_2_acres))
 
 agri_merge <- full_join(land, plot, by = "new_HHID", all.y = TRUE) %>%
   full_join(crop_combined, by = "new_HHID", all.y = TRUE) %>%
@@ -130,35 +153,10 @@ agri_merge <- full_join(land, plot, by = "new_HHID", all.y = TRUE) %>%
 
 agri_merge[is.na(agri_merge)]=0
 
-### ------ load household roster data and add primary key  ------ ###
-### ------------------------------ ###
 
-#SEC 1 - Household roster
-#education of father, education of mother
-
-
-# household <- read_dta('sec1.dta') 
-# household$new_HHID <- paste(household$clust, household$nh, sep = "_" )
-# ##household$new_PID <- paste(household$clust, household$nh, household$pid, sep = "_" )
-# 
-# 
-# father_ed <- household %>%          #levels of education of individuals father
-#   select(clust, nh, pid,  s1q15, new_HHID )  %>%
-#   filter(!is.na(s1q15)) %>%
-#   filter(s1q15 != 98, s1q15 != 1)  #filtering out NA and None values 
-# 
-# 
-# mother_ed <- household %>%
-#   select(clust, nh, pid,  s1q19, new_HHID )  %>%
-#   filter(!is.na(s1q19)) %>%
-#   filter(s1q19 != 98, s1q19 != 1) #filtering out NA and None values 
-# 
-# 
-# ##gathering father and mother education into one dataframe
-# parents_ed <- full_join(father_ed, mother_ed, by = c( 'new_HHID') ) %>%
-#   select( new_HHID, s1q15, s1q19)
-
-
+### ----------------------------------------------------------------- ###
+### ------ Education variables------ ###
+### ----------------------------------------------------------------- ###
 
 ##SEC2A - General Education
 ed_general <- read_dta('sec2a.dta')
@@ -235,7 +233,7 @@ educ_expenses[is.na(educ_expenses)] <- 0
 educ_expenses_totals <- educ_expenses %>%
   mutate(rowSums(educ_expenses))  %>%
   mutate(totals = rowSums(educ_expenses) - (nh + clust)) %>%
- ### select()  totals) %>%
+  ### select()  totals) %>%
   filter(totals > 0)                      ##filtering out individuals that dont have an educ expense as not to mess up household count later
 
 educ_expenses_totals$new_HHID <- paste(educ_expenses_totals$clust, educ_expenses_totals$nh, sep = "_" )
@@ -264,15 +262,7 @@ educ_variables <- left_join(time_spent_going_school_averages, level_study_househ
 
 
 educ_variables[is.na(educ_variables)]=0
-#######################################################
-###ended here -
-#######################################################
 
-# SEC1 <- read_dta('SEC1.dta')%>%
-#   distinct(clust, nh, pid, .keep_all=TRUE)
-# SEC1$new_HHID <- paste(SEC1$clust, SEC1$nh, sep = "_" )
-# SEC1$new_PID <- paste(SEC1$clust, SEC1$nh, SEC1$pid, sep = "_" )
-# new_HHIDs_list <- distinct(SEC1, new_HHID, .keep_all=FALSE)
 
 #################### Profit Load Data########################
 ####################################################
@@ -353,7 +343,7 @@ sum_income$new_HHID <- paste(sum_income$clust, sum_income$nh, sep = "_" )
 # farmland rent  
 SUBAGG22 <- read_dta("aggregates/SUBAGG22.dta")
 SUBAGG22$new_HHID <- paste(SUBAGG22$clust, SUBAGG22$nh, sep = "_" )
-  
+
 SUBAGG22 <- SUBAGG22 %>%
   select(nh, clust, new_HHID, expland) %>%
   mutate( exp_land_rent= -1*expland) %>%
@@ -401,41 +391,66 @@ sum_expenses$new_HHID <- paste(sum_expenses$clust, sum_expenses$nh, sep = "_" )
 
 
 net_join <- left_join(sum_income, sum_expenses, by = 'new_HHID')
-  
+
 net_join[is.na(net_join)]=0 
-  
+
 profit_join <- net_join %>%
   mutate(sum_profit  = (sum_income_value + sum_expenses_value)) %>%
   select(new_HHID, sum_income_value, sum_expenses_value, sum_profit)
 
 
 
+
+
+############## COMBINED DATASET  #####################
+#####################################################
+
 Final_df <- left_join(profit_join, educ_variables, by = "new_HHID")%>%
   left_join( agri_merge, by = "new_HHID") %>%
-  mutate(profit_per_area = sum_profit / total_land_area)
+  mutate(clust = strtoi((substring(new_HHID, 1, 4))), base=4L) %>%
+  left_join(clust_info,  by = 'clust') %>%
+  mutate(profit_per_land = if_else(total_land_area != 0, (sum_profit / total_land_area), 0)) %>%
+ mutate(profit_per_plot = if_else(hh_plot_area != 0, (sum_profit / hh_plot_area), 0))
+  
+###profit by region
+ggplot(data = Final_df, aes(sum_profit, region_name)) +
+  geom_boxplot()
 
-Final_df_without_key <- select(Final_df, sum_profit , highest_level_avgs, hh_time_spent_going_to_school_avg 
-                               , highest_qualification_avgs ,hh_educ_expenses_avg , total_land_area ,  hh_plot_area)    
-                                ## cassava , maize , minor_cassava , minor_Plantain)
 
-##trying a corelation matrix
-final_df.cor <- cor(Final_df_without_key)
+#######LM set ups##########
 
-colnames(Final_df)
-
-all_variables_lm <- lm(Final_df, formula = sum_profit ~  highest_level_avgs  + hh_time_spent_going_to_school_avg 
-               + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
-              cassava + maize + minor_cassava + minor_Plantain)
-   
-
+###dependant variable -- sum profit
+all_variables_lm <- lm(Final_df, formula = sum_profit ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
+                       + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
+                         cassava + maize + minor_cassava + minor_Plantain
+                       + profit_per_land + profit_per_plot)
 
 summary(all_variables_lm)
 
 
 siginificant_variables_lm <- lm(Final_df, formula = sum_profit ~  highest_level_avgs  + hh_time_spent_going_to_school_avg 
-                 + total_land_area +  hh_plot_area +  minor_cassava + minor_Plantain)
+                                + total_land_area +  hh_plot_area +  minor_cassava + minor_Plantain)
 
 summary(siginificant_variables_lm )
+
+
+###land area profit######
+all_variables_per_land_lm <- lm(Final_df, formula = profit_per_land ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
+                       + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
+                         cassava + maize + minor_cassava + minor_Plantain
+                       )
+
+summary(all_variables_per_land_lm)
+
+
+###land area profit######
+all_variables_per_plot_lm <- lm(Final_df, formula = profit_per_plot ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
+                                + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
+                                  cassava + maize + minor_cassava + minor_Plantain
+)
+
+summary(all_variables_per_plot_lm)
+
 
 ##these variables have the highest significant values 
 #3 stars 
@@ -459,8 +474,8 @@ plot(fitted(time_spent_going_to_school_avg_profit_lm ), resid((time_spent_going_
 ##dummies /specs 
 
 time_spent_going_to_school_avg_profit_lm_poly <- lm(Final_df, formula = sum_profit  ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
-                                        + I(hh_time_spent_going_to_school_avg^2) + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
-                                          cassava + maize + minor_cassava + minor_Plantain)
+                                                    + I(hh_time_spent_going_to_school_avg^2) + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
+                                                      cassava + maize + minor_cassava + minor_Plantain)
 
 
 ggplot(data = Final_df, aes(x = I(hh_time_spent_going_to_school_avg ^2), y = sum_profit )) +
@@ -489,8 +504,8 @@ plot(fitted(hh_plot_area_lm), resid((hh_plot_area_lm) ),
 ##dummies /specs 
 
 hh_plot_area_lm_poly <- lm(Final_df, formula = sum_profit  ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
-                                                    + I(hh_plot_area^2) + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
-                                                      cassava + maize + minor_cassava + minor_Plantain)
+                           + I(hh_plot_area^2) + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
+                             cassava + maize + minor_cassava + minor_Plantain)
 
 
 ggplot(data = Final_df, aes(x = I(hh_plot_area ^2), y = sum_profit )) +
@@ -544,8 +559,8 @@ plot(fitted( highest_level_avgs_lm ), resid(( highest_level_avgs_lm ) ),
 ##dummies /specs 
 
 highest_level_avgs_lm_poly <- lm(Final_df, formula = sum_profit  ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
-                                                    + I(hh_time_spent_going_to_school_avg^2) + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
-                                                      cassava + maize + minor_cassava + minor_Plantain)
+                                 + I(hh_time_spent_going_to_school_avg^2) + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
+                                   cassava + maize + minor_cassava + minor_Plantain)
 
 
 ggplot(data = Final_df, aes(x = I(highest_level_avgs  ^2), y = sum_profit )) +
@@ -586,60 +601,6 @@ ggplot(data = Final_df, aes(x = I(total_land_area  ^2), y = sum_profit )) +
           Profits per Household -- Polynomial")
 
 
-##hh_educ_expenses_avg
-##owe_money
-# owe_money_lm <- lm(Final_df, formula = sum_aggr_inc ~ owe_money)
-# summary(owe_money_lm)
-# hist(rstandard(owe_money_lm ), # normal distribution of errors?
-#      xlab = "Standardized residuals", main = 'Standardized Residuals of Owed Money Paid ')
-# 
-# 
-# plot(fitted(owe_money_lm ), resid(owe_money_lm ),
-#      xlab = "Fitted", ylab = "Residuals",
-#      main = 'Fitted vs Residuals for Owed Money in Household ',
-#      abline(h = 0, col = "blue"))
-# # polynomial
-# owe_money_poly <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs + hh_time_spent_going_to_school_avg
-#                      + highest_qualification_avgs + hh_educ_expenses_avg + totemp + loan_amt + owe_money
-#                      + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid  + assets_curr_val +
-#                        total_land_size_ropes_2_acres)
-# summary(owe_money_poly)
-# # polynomial with dummy
-# owe_money_poly_dummy <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs + hh_time_spent_going_to_school_avg
-#                            + highest_qualification_avgs + hh_educ_expenses_avg + totemp + loan_amt + owe_money + I(owe_money ^2)
-# #                            + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid + assets_curr_val +
-# #                              total_land_size_ropes_2_acres)
-# # summary(owe_money_poly_dummy)
-# 
-# ##1 stars 
-# ##hh_educ_expenses_avg 
-# 
-# avg_educexpenses_profit_lm <- lm(Final_df, formula = sum_aggr_inc ~  hh_educ_expenses_avg)
-# 
-# summary(avg_educexpenses_profit_lm)
-# 
-# hist(rstandard( highest_educexpenses_profit_lm), 
-#      xlab = "Standardized residuals", main = 'Standardized Residuals of Average
-#      Education Expenses' )
-# 
-# plot(fitted(avg_educexpenses_profit_lm), resid(avg_educexpenses_profit_lm),
-#      xlab = "Fitted", ylab = "Residuals",
-#      main = 'Fitted vs Residuals for Average Education Expenses
-#      in Household ',
-#      abline(h = 0, col = "blue"))
-# 
-# ##dummies /specs 
-# 
-# avg_educexpenses_profit_poly <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
-#                                    + highest_qualification_avgs + hh_educ_expenses_avg + I(hh_educ_expenses_avg^2) +
-#                                      totemp + loan_amt + owe_money
-#                                    + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid + assets_curr_val +
-#                                      total_land_size_ropes_2_acres)
-# 
-# 
-# ggplot(data = Final_df, aes(x = I(hh_educ_expenses_avg^2), y = sum_aggr_inc)) +
-#   geom_smooth() +
-#   xlab("Average of Qualifications Squared") +
-#   ylab(" Profits by household") +
-#   ggtitle("Average Education Expenses per household
-#            -- Polynomial")
+
+
+
