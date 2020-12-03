@@ -62,19 +62,18 @@ plot <- select(agri_plot, new_HHID, s8bq4a, s8bq4b, s8bq5)  %>%
 # figure out what crops got planted the most
 
 Cassava_crops <- agri_plot %>% 
-  filter(s8bq12a == 18) %>% 
   select(new_HHID, s8bq12a) %>%
   mutate(cassava = (s8bq12a == 18))  %>% 
   filter(cassava == TRUE) %>%
-  distinct(cassava,new_HHID)
+  distinct(cassava, new_HHID)
 
 
 Maize_crops <- agri_plot %>% 
-  filter(s8bq12a == 22) %>% 
   select(new_HHID, s8bq12a)  %>%
   mutate(maize = (s8bq12a == 22))  %>% 
-  filter(maize == TRUE) %>%
+  filter(maize = TRUE) %>%
   distinct(maize,new_HHID)
+
 
 
 
@@ -86,28 +85,26 @@ crop2 <- agri_plot %>%
 
 
 Cassava_minor_crop<- agri_plot %>%
-  filter(s8bq12b == 18) %>%
   select(new_HHID, s8bq12b) %>%
   mutate(minor_cassava = (s8bq12b == 18))  %>% 
-  filter(minor_cassava == TRUE) %>%
+  filter(minor_cassava = TRUE)) %>%
   distinct(minor_cassava,new_HHID)
 
 
 Plantain_minor_crop<- agri_plot %>%
-  filter(s8bq12b == 06) %>%
   select(new_HHID, s8bq12b) %>%
   mutate(minor_Plantain = (s8bq12b == 06))  %>% 
-  filter(minor_Plantain == TRUE) %>%
+  filter(minor_Plantain = TRUE) %>%
   distinct(minor_Plantain,new_HHID)
-
-
 
 
 crop_combined <- full_join(Cassava_crops , Maize_crops, by = 'new_HHID') %>%
   full_join(Cassava_minor_crop ,by = 'new_HHID') %>%
   full_join(Plantain_minor_crop ,by = 'new_HHID')
 
-crop_combined[is.na(crop_combined)]=0
+crop_combined[is.na(crop_combined)]= FALSE
+
+crop_combined <- distinct(crop_combined, new_HHID, cassava, maize ,minor_cassava,  minor_Plantain)
 
 ### -------------------------------------- ###
 ### ------ local area characteritics ------ ###
@@ -117,27 +114,36 @@ SEC8C1$new_HHID <- paste(SEC8C1$clust, SEC8C1$nh, sep = "_" )
 
 
 ########fix me, working on a local variable#######
-Harvest <- SEC8C1 %>%
-  select(new_HHID, s8cq6) %>%
-  filter(!is.na(s8cq6)) %>% 
-  mutate(market_name = case_when(s8cq6 == 1 ~'Pre-harvest contractor',
-                                 s8cq6 == 2 ~'Farm gate buyer',
-                                 s8cq6 == 3 ~'Market trader', 
-                                 s8cq6 == 4 ~'Consumer',  
-                                 s8cq6 == 5~'State trading organisation', 
-                                 s8cq6 == 6~'Co-operatives'
-  )) %>%
-  pivot_wider(names_from = market_name , values_from = s8cq6, values_fn = list)
-
-
-Harvest_TF <- Harvest %>%
-  mutate(Pre_harvest_contractor = ifelse(is.null('Pre-harvest contractor') == TRUE, FALSE, TRUE)) %>%
-  mutate(farm_gate_buyer = ifelse(is.null('Farm gate buyer') == TRUE, FALSE, TRUE)) %>%
-  mutate(market_trader= ifelse('Market trader' == 'NULL', FALSE, TRUE)) %>%
-  mutate(consumer = ifelse(is.null('Consumer') == TRUE, FALSE, TRUE)) %>%
-  mutate(state_trading_org = ifelse(is.null('State trading organisation') == TRUE, FALSE, TRUE)) %>%
-  mutate(co_op = ifelse(is.null('Co-operatives') == TRUE, FALSE, TRUE)) 
-
+# Harvest <- SEC8C1 %>%
+#   select(new_HHID, s8cq6) %>%
+#   filter(!is.na(s8cq6)) %>% 
+#   distinct(new_HHID, s8cq6) %>% 
+#   mutate(market_name = case_when(s8cq6 == 1 ~'Pre-harvest contractor',
+#                                  s8cq6 == 2 ~'Farm gate buyer',
+#                                  s8cq6 == 3 ~'Market trader',
+#                                  s8cq6 == 4 ~'Consumer',
+#                                  s8cq6 == 5~'State trading organisation',
+#                                  s8cq6 == 6~'Co-operatives'
+#   )) %>%
+#   pivot_wider(names_from = market_name , values_from = s8cq6)
+# 
+# 
+# 
+# Harvest_TF <- Harvest %>%
+#   mutate(Pre_harvest_contractor = case_when(is.na('Pre-harvest contractor') ~FALSE,
+#                                             !is.na('Pre-harvest contractor') ~TRUE))
+#                                             
+#   
+#   Pre-harvest contractor'
+#   
+#   
+#   mutate(Pre_harvest_contractor = ifelse(!is.na('Pre-harvest contractor') , TRUE, FALSE)) 
+#     mutate(farm_gate_buyer = ifelse(is.na('Farm gate buyer'), FALSE, TRUE)) %>%
+#   mutate(market_trader= ifelse(is.na('Market trader'), FALSE, FALSE)) %>%
+#   mutate(consumer = ifelse(is.na('Consumer'), FALSE, TRUE)) %>%
+#   mutate(state_trading_org = ifelse(is.na('State trading organisation'), FALSE, TRUE)) %>%
+#   mutate(co_op = ifelse(is.na('Co-operatives'), FALSE, TRUE)) 
+# 
 
 
 
@@ -429,7 +435,7 @@ summary(all_variables_lm)
 
 
 siginificant_variables_lm <- lm(Final_df, formula = sum_profit ~  highest_level_avgs  + hh_time_spent_going_to_school_avg 
-                                + total_land_area +  hh_plot_area +  minor_cassava + minor_Plantain)
+                                + total_land_area +  hh_plot_area + cassava + minor_cassava + minor_Plantain)
 
 summary(siginificant_variables_lm )
 
