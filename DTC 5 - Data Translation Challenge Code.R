@@ -23,17 +23,18 @@ clust_info <- SEC0A %>%
                                  region ==  7 ~'Brong Ahafo', 
                                  region == 8 ~'Northern',  
                                  region == 9~'Upper East', 
-                                 region == 10 ~'Upper West' ))
+                                 region == 10 ~'Upper West' )) %>%
+  distinct(clust, region_name)
 
 #########AGRICULTURE###############
 ### ------ load agriculture data and add primary key  ------ ###
 ### ------------------------------ ###
 
-agri_land <- read_dta('data/glss4_new/sec8a1.dta') 
+agri_land <- read_dta('sec8a1.dta') 
 agri_land$new_HHID <- paste(agri_land$clust, agri_land$nh, sep="_") 
 
 
-agri_plot <- read_dta('data/glss4_new/sec8b.dta') 
+agri_plot <- read_dta('sec8b.dta') 
 agri_plot$new_HHID <- paste(agri_plot$clust, agri_plot$nh, sep="_")
 
 
@@ -79,7 +80,7 @@ Cassava_crops <- agri_plot %>%
 Maize_crops <- agri_plot %>% 
   select(new_HHID, s8bq12a)  %>%
   mutate(maize = (s8bq12a == 22))  %>% 
-  filter(maize = TRUE) %>%
+  filter(maize == TRUE) %>%
   distinct(maize,new_HHID)
 
 
@@ -93,14 +94,14 @@ crop2 <- agri_plot %>%
 Cassava_minor_crop<- agri_plot %>%
   select(new_HHID, s8bq12b) %>%
   mutate(minor_cassava = (s8bq12b == 18))  %>% 
-  filter(minor_cassava = TRUE) %>%
+  filter(minor_cassava == TRUE) %>%
   distinct(minor_cassava,new_HHID)
 
 
 Plantain_minor_crop<- agri_plot %>%
   select(new_HHID, s8bq12b) %>%
   mutate(minor_Plantain = (s8bq12b == 06))  %>% 
-  filter(minor_Plantain = TRUE) %>%
+  filter(minor_Plantain == TRUE) %>%
   distinct(minor_Plantain,new_HHID)
 
 
@@ -141,6 +142,9 @@ Harvest <- SEC8C1 %>%
   pivot_wider(names_from = market_name 
               , values_from = s8cq6, values_fill = 0, values_fn = sum)
 
+Harvest_TF <- Harvest %>%
+ mutate(Pre_harvest_contractor2 = ) 
+
 # as.numeric(Harvest)
 # 
 # Harvest[Harvest!= 0 & H]= 1
@@ -157,22 +161,6 @@ Harvest <- SEC8C1 %>%
 # #   mutate(co_op = ifelse(is.na('Co-operatives'), FALSE, TRUE)) 
 
 # 
-# 
-# 
-# Harvest_TF <- Harvest %>%
-#   mutate(Pre_harvest_contractor = case_when(is.na('Pre-harvest contractor') ~FALSE,
-#                                             !is.na('Pre-harvest contractor') ~TRUE))
-#                                             
-#   
-#   Pre-harvest contractor'
-#   
-#   
-#   mutate(Pre_harvest_contractor = ifelse(!is.na('Pre-harvest contractor') , TRUE, FALSE)) 
-#     mutate(farm_gate_buyer = ifelse(is.na('Farm gate buyer'), FALSE, TRUE)) %>%
-#   mutate(market_trader= ifelse(is.na('Market trader'), FALSE, FALSE)) %>%
-#   mutate(consumer = ifelse(is.na('Consumer'), FALSE, TRUE)) %>%
-#   mutate(state_trading_org = ifelse(is.na('State trading organisation'), FALSE, TRUE)) %>%
-#   mutate(co_op = ifelse(is.na('Co-operatives'), FALSE, TRUE)) 
 # 
 
 
@@ -304,50 +292,65 @@ educ_variables[is.na(educ_variables)]=0
 #################### Profit Load Data########################
 
 
-AGG1 <- read_dta("aggregates/AGG1.dta")%>%
-  transmute(new_HHID = paste(AGG1$clust, AGG1$nh, sep = "_" ), totemp, nh, clust)
+AGG1 <- read_dta("aggregates/AGG1.dta")
+AGG1$new_HHID = paste(AGG1$clust, AGG1$nh, sep = "_" )
 
-AGG2 <- read_dta("aggregates/AGG2.dta")%>%
-  transmute(new_HHID = paste(AGG2$clust, AGG2$nh, sep = "_" ), sum_aggr_inc = rowSums(AGG2[,c('agri1c', 'agri2c')]))
+
+AGG2 <- read_dta("aggregates/AGG2.dta")
+AGG2$new_HHID = paste(AGG2$clust, AGG2$nh, sep = "_" )
+AGG2 <- mutate(AGG2,sum_aggr_inc = rowSums(AGG2[,c('agri1c', 'agri2c')]))
 
 # SUBAGG7 SEFARM = Farm self employment income
-SUBAGG7  <- read_dta("aggregates/subagg7.dta") %>%
-  transmute(new_HHID = paste(SUBAGG7$clust, SUBAGG7$nh, sep = "_" ), self_emp_inc = sefarm)
+SUBAGG7  <- read_dta("aggregates/subagg7.dta")
+SUBAGG7$new_HHID = paste(SUBAGG7$clust, SUBAGG7$nh, sep = "_" )
+SUBAGG7  <- mutate(SUBAGG7, self_emp_inc = sefarm)
 
 # SUBAGG9 WATINC = Income from water sold
-SUBAGG9  <- read_dta("aggregates/subagg9.dta")%>%
-  transmute(new_HHID = paste(SUBAGG9$clust, SUBAGG9$nh, sep = "_" ), inc_water_sold = watinc)
+SUBAGG9  <- read_dta("aggregates/subagg9.dta")
+SUBAGG9$new_HHID = paste(SUBAGG9$clust, SUBAGG9$nh, sep = "_" )
+SUBAGG9 <- mutate(SUBAGG9, inc_water_sold = watinc)
+
 
 # LNDINC1 = Income from renting out land
 # LNDINC2 = Income from sharecropping
-SUBAGG10  <- read_dta("aggregates/SUBAGG10.dta") %>%
-  transmute(new_HHID = paste(SUBAGG10$clust, SUBAGG10$nh, sep = "_" ), sum_inc_land = rowSums(SUBAGG10[,c('lndinc1', 'lndinc2')]))
+SUBAGG10  <- read_dta("aggregates/SUBAGG10.dta") 
+SUBAGG10$new_HHID = paste(SUBAGG10$clust, SUBAGG10$nh, sep = "_" )
+SUBAGG10 <- mutate(SUBAGG10, sum_inc_land = rowSums(SUBAGG10[,c('lndinc1', 'lndinc2')]))
+
 
 
 # LIVINC = Income from renting out livestock
-SUBAGG11  <- read_dta("aggregates/SUBAGG11.dta") %>%
-  transmute(new_HHID = paste(SUBAGG11$clust, SUBAGG11$nh, sep = "_" ), inc_rent_livestock = livinc)
+SUBAGG11  <- read_dta("aggregates/SUBAGG11.dta") 
+SUBAGG11$new_HHID = paste(SUBAGG11$clust, SUBAGG11$nh, sep = "_" )
+SUBAGG11 <- mutate(SUBAGG11, inc_rent_livestock = livinc)
 
 # EQINC = Income from renting out agricultural equipment
-SUBAGG12 <- read_dta('aggregates/SUBAGG12.dta')%>%
-  transmute(new_HHID = paste(SUBAGG12$clust, SUBAGG12$nh, sep = "_" ), inc_rent_equip = eqinc)
+SUBAGG12 <- read_dta('aggregates/SUBAGG12.dta')
+SUBAGG12$new_HHID = paste(SUBAGG12$clust, SUBAGG12$nh, sep = "_" )
+SUBAGG12 <- mutate(SUBAGG12, inc_rent_equip = eqinc)
+
 
 #CRPINC1 = Revenue from sale of cash crops – main outlet
 #CRPINC2 = Revenue from sale of cash crops – other outlet
-SUBAGG13 <- read_dta('aggregates/SUBAGG13.dta')%>%
-  transmute(new_HHID = paste(SUBAGG13$clust, SUBAGG13$nh, sep = "_" ), sum_cash_crops = rowSums(SUBAGG13[,c('crpinc1', 'crpinc2')]))
+SUBAGG13 <- read_dta('aggregates/SUBAGG13.dta')
+SUBAGG13$new_HHID = paste(SUBAGG13$clust, SUBAGG13$nh, sep = "_" )
+SUBAGG13 <-mutate(SUBAGG13, sum_cash_crops = rowSums(SUBAGG13[,c('crpinc1', 'crpinc2')]))
+
 
 #SUBAGG14 ROOTINC = Revenue from sale of roots/fruit/vegetables
-SUBAGG14 <- read_dta('aggregates/SUBAGG14.dta')%>%
-  transmute(new_HHID = paste(SUBAGG14$clust, SUBAGG14$nh, sep = "_" ), inc_food_sales = rootinc)
+SUBAGG14 <- read_dta('aggregates/SUBAGG14.dta')
+SUBAGG14$new_HHID = paste(SUBAGG14$clust, SUBAGG14$nh, sep = "_" )
+SUBAGG14 <- mutate(SUBAGG14, inc_food_sales = rootinc)
 
 #SUBAGG15 INCOTHAG = Revenue from other agricultural source
-SUBAGG15 <- read_dta('aggregates/SUBAGG15.dta')%>%
-  transmute(new_HHID = paste(SUBAGG15$clust, SUBAGG15$nh, sep = "_" ), inc_other_agr = incothag)
+SUBAGG15 <- read_dta('aggregates/SUBAGG15.dta')
+SUBAGG15$new_HHID = paste(SUBAGG15$clust, SUBAGG15$nh, sep = "_" )
+SUBAGG15 <- mutate(SUBAGG15, inc_other_agr = incothag)
 
 #SUBAGG16 TRCRPINC = Revenue from the sale of transformed crop products
-SUBAGG16 <- read_dta('aggregates/SUBAGG16.dta')%>%
-  transmute(new_HHID = paste(SUBAGG16$clust, SUBAGG16$nh, sep = "_" ), inc_transformed_crop = trcrpinc)
+SUBAGG16 <- read_dta('aggregates/SUBAGG16.dta')
+SUBAGG16$new_HHID = paste(SUBAGG16$clust, SUBAGG16$nh, sep = "_" )
+SUBAGG16 <- mutate(SUBAGG16, inc_transformed_crop = trcrpinc)
 
 income <- full_join(AGG1, AGG2, by = 'new_HHID')%>%
   full_join(SUBAGG7, by = 'new_HHID')%>%
@@ -364,15 +367,14 @@ income[is.na(income)]=0
 
 
 sum_income <- income %>%
-  select('nh', 'clust', 'totemp','sum_aggr_inc',  'inc_water_sold' , 'sum_inc_land' ,
+  select('nh.x', 'clust.x', 'totemp','sum_aggr_inc',  'inc_water_sold' , 'sum_inc_land' ,
          'inc_rent_livestock' ,  'inc_rent_equip' , 'sum_cash_crops' , 'inc_food_sales' , 
-         'inc_other_agr', 'inc_transformed_crop') %>%
-  mutate(sum_income, total = rowSums(sum_income))  %>%
-  mutate(sum_income, sum_income_value = rowSums(sum_income) - (nh + clust))
+         'inc_other_agr', 'inc_transformed_crop')
+  
+sum_income <- mutate(sum_income, total = rowSums(sum_income))
+sum_income <- mutate(sum_income, sum_income_value = rowSums(sum_income) - (nh.x + clust.x))
 
-sum_income$new_HHID <- paste(sum_income$clust, sum_income$nh, sep = "_" )
-
-
+sum_income$new_HHID <- paste(sum_income$clust.x, sum_income$nh.x, sep = "_" )
 
 
 
@@ -389,26 +391,30 @@ SUBAGG22 <- SUBAGG22 %>%
   filter(!is.na(exp_land_rent))
 
 #crop exp
-SUBAGG23 <- read_dta("aggregates/SUBAGG23.dta") %>%
-  transmute(new_HHID = paste(SUBAGG23$clust, SUBAGG23$nh, sep = "_" ), exp_crops = -1*expcrop)
+SUBAGG23 <- read_dta("aggregates/SUBAGG23.dta") 
+SUBAGG23$new_HHID = paste(SUBAGG23$clust, SUBAGG23$nh, sep = "_" )
+SUBAGG23  <- mutate(SUBAGG23 , exp_crops = -1*expcrop)
 
 
 # %>%
 # SUBAGG23[is.na(expcrop)] <- 0
 
 #livestock inputs
-SUBAGG24 <- read_dta("aggregates/SUBAGG24.dta") %>%
-  transmute(new_HHID = paste(SUBAGG24$clust, SUBAGG24$nh, sep = "_" ), exp_livestock = -1* expliv)
+SUBAGG24 <- read_dta("aggregates/SUBAGG24.dta")
+SUBAGG24$new_HHID = paste(SUBAGG24$clust, SUBAGG24$nh, sep = "_" )
+SUBAGG24 <- mutate(SUBAGG24, exp_livestock = -1* expliv)
 
 #EXPFDPR1 = Labour costs on food processing
 #EXPFDPR2 = Other costs on food processing
-SUBAGG25<- read_dta("aggregates/SUBAGG25.dta")%>%
-  transmute(new_HHID = paste(SUBAGG25$clust, SUBAGG25$nh, sep = "_" ), process_cost = -1* rowSums(SUBAGG25[,c('expfdpr1', 'expfdpr2')]))
+SUBAGG25<- read_dta("aggregates/SUBAGG25.dta")
+SUBAGG25$new_HHID = paste(SUBAGG25$clust, SUBAGG25$nh, sep = "_" )
+SUBAGG25 <- mutate(SUBAGG25, process_cost = -1* rowSums(SUBAGG25[,c('expfdpr1', 'expfdpr2')]))
 
 
 #SUBAGG31 DEPNEQ = Depreciation of farming equipment 
-SUBAGG31 <- read_dta("aggregates/SUBAGG31.dta")%>%
-  transmute(new_HHID = paste(SUBAGG31$clust, SUBAGG31$nh, sep = "_" ), equip_depreciation = -1*depneq)
+SUBAGG31 <- read_dta("aggregates/SUBAGG31.dta")
+SUBAGG31$new_HHID = paste(SUBAGG31$clust, SUBAGG31$nh, sep = "_" )
+SUBAGG31<- mutate(SUBAGG31, equip_depreciation = -1*depneq)
 
 expenses <- full_join(SUBAGG22, SUBAGG23, by = 'new_HHID')%>%
   full_join(SUBAGG24, by = 'new_HHID')%>%
@@ -418,12 +424,13 @@ expenses[is.na(expenses)]=0
 
 
 sum_expenses <- expenses%>%
-  select('nh', 'clust', 'exp_land_rent' , 'exp_crops' , 'exp_livestock' ,
-         'process_cost' , 'equip_depreciation') %>%
-  mutate(sum_expenses, total = rowSums(sum_expenses))  %>%
-  mutate(sum_expenses, sum_expenses_value = rowSums(sum_expenses) - (nh + clust))
+  select('nh.x', 'clust.x', 'exp_land_rent' , 'exp_crops' , 'exp_livestock' ,
+         'process_cost' , 'equip_depreciation')
 
-sum_expenses$new_HHID <- paste(sum_expenses$clust, sum_expenses$nh, sep = "_" )
+sum_expenses <-  mutate(sum_expenses, total = rowSums(sum_expenses))
+sum_expenses <-  mutate(sum_expenses, sum_expenses_value = rowSums(sum_expenses) - (nh.x + clust.x))
+
+sum_expenses$new_HHID <- paste(sum_expenses$clust.x, sum_expenses$nh.x, sep = "_" )
 
 
 
@@ -436,7 +443,7 @@ net_join <- left_join(sum_income, sum_expenses, by = 'new_HHID')
 net_join[is.na(net_join)]=0 
 
 profit_join <- net_join %>%
-  mutate(sum_profit  = (sum_income_value + sum_expenses_value)) %>%
+  mutate(net_join, sum_profit = (sum_income_value + sum_expenses_value)) %>%
   select(new_HHID, sum_income_value, sum_expenses_value, sum_profit)
 
 
@@ -453,19 +460,36 @@ Final_df <- left_join(profit_join, educ_variables, by = "new_HHID")%>%
   left_join(clust_info,  by = 'clust') %>%
   mutate(profit_per_land = if_else(total_land_area != 0, (sum_profit / total_land_area), 0)) %>%
  mutate(profit_per_plot = if_else(hh_plot_area != 0, (sum_profit / hh_plot_area), 0))
-  
+
+####DATA VISUALISATION PLOTS #######
 ###profit by region
 ggplot(data = Final_df, aes((log(sum_profit))
                             , region_name)) +
+  xlab("Household Argicultural Profits ") +     ##whats the unit of measure here? Everywhere else?
+  ylab("Region") +
+  ggtitle("Household Agricultural Profits by Region in Ghana") +
   geom_boxplot()
+
+####profit by education variables
+
+###profit by Highest Level of Study 
+ggplot(data = Final_df, aes(x = highest_level_avgs, y = sum_profit )) +
+  geom_bar(stat = "identity", width = 1) + (xlim(0,15)) +
+  xlab("Average Highest Level of Study") +
+  ylab(" Household Agricultural Profits") +
+  ggtitle("Household Agricultural Profits by
+          Average Highest Level of Study ")
+
+
+ggplot(data = Final_df, aes((sum_profit)
+                            , highest) +
+  xlab("Household Argicultural Profits ") +     ##whats the unit of measure here? Everywhere else?
+  ylab("Region") +
+  geom_bar()
 
 
 geom_bar(data = Final_df, mapping =  aes(sum_profit, hh_plot_area), width = 10, na.rm = TRUE)
 
-
-
-
-?geom_bar
 
 ######bar graph of profit by highest level of study 
 ggplot(data = Final_df, aes(x = highest_level_avgs, y = sum_profit )) +
@@ -476,22 +500,26 @@ ggplot(data = Final_df, aes(x = highest_level_avgs, y = sum_profit )) +
 
 
 
-#######LM set ups##########
+#######OVERALL LMS set ups##########
 
-
-###dependant variable -- sum profit
+###dependent variable -- sum profit####
 all_variables_lm <- lm(Final_df, formula = sum_profit ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
                        + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
-                         cassava + maize + minor_cassava + minor_Plantain
+                         cassava + maize + minor_cassava + minor_Plantain +
+                         Market_trader + Farm_gate_buyer + Consumer + State_trading_organisation +
+                        Co_operatives + Pre_harvest_contractor
                        + profit_per_land + profit_per_plot)
 
 summary(all_variables_lm)
 
 
+##USING VARIABLES THAT HAS SIGNIFICANT ##
 siginificant_variables_lm <- lm(Final_df, formula = sum_profit ~  highest_level_avgs  + hh_time_spent_going_to_school_avg 
-                                + total_land_area +  hh_plot_area + cassava + minor_cassava + minor_Plantain)
+                                + total_land_area +  hh_plot_area + cassava + minor_cassava + minor_Plantain 
+                                + State_trading_organisation )
 
 summary(siginificant_variables_lm )
+
 
 
 ###land area profit######
@@ -537,11 +565,12 @@ time_spent_going_to_school_avg_profit_lm_poly <- lm(Final_df, formula = sum_prof
                                                     + I(hh_time_spent_going_to_school_avg^2) + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
                                                       cassava + maize + minor_cassava + minor_Plantain)
 
+summary(time_spent_going_to_school_avg_profit_lm_poly)
 
 ggplot(data = Final_df, aes(x = hh_time_spent_going_to_school_avg, y = sum_profit )) +
   geom_smooth() +
   xlab("Average of Time Spent Going to School Squared") +
-  ylab(" Profits by household") +
+  ylab(" Household Agricultural Profits") +
   ggtitle("Average of Time Spent Going to School by 
           Profits per Household -- Polynomial")
 
@@ -568,6 +597,7 @@ hh_plot_area_lm_poly <- lm(Final_df, formula = sum_profit  ~ highest_level_avgs 
                              cassava + maize + minor_cassava + minor_Plantain)
 
 
+
 ggplot(data = Final_df, aes(x = I(hh_plot_area ^2), y = sum_profit )) +
   geom_smooth() +
   xlab("Plot Area (in acres) Squared") +
@@ -577,19 +607,18 @@ ggplot(data = Final_df, aes(x = I(hh_plot_area ^2), y = sum_profit )) +
 
 
 ##MINOR CASSAVA TRUE ######
-minor_cassava_lm <- lm(Final_df, formula = sum_profit ~ minor_cassava )
-
-summary(minor_cassava_lm)
-
-hist(rstandard(minor_cassava_lm ), 
-     xlab = "Standardized residuals", main = 'Standardized Residuals of Average
-     Highest Qualification' )
-
-plot(fitted(minor_cassava_lm ), resid(minor_cassava_lm),
-     xlab = "Fitted", ylab = "Residuals",
-     main = 'Fitted vs Residuals for Average Highest 
-     Qualifications in Household ',
-     abline(h = 0, col = "blue"))
+# minor_cassava_lm <- lm(Final_df, formula = sum_profit ~ minor_cassava )
+# 
+# summary(minor_cassava_lm)
+# 
+# hist(rstandard(minor_cassava_lm ), 
+#      xlab = "Standardized residuals", main = 'Standardized Residuals of Growing Cassava ' )
+# 
+# plot(fitted(minor_cassava_lm ), resid(minor_cassava_lm),
+#      xlab = "Fitted", ylab = "Residuals",
+#      main = 'Fitted vs Residuals for Average Highest 
+#      Qualifications in Household ',
+#      abline(h = 0, col = "blue"))
 
 
 
@@ -642,8 +671,7 @@ hist(rstandard(( total_land_area_lm  )),
 
 plot(fitted( total_land_area_lm  ), resid(( total_land_area_lm  ) ),
      xlab = "Fitted", ylab = "Residuals",
-     main = 'Fitted vs Residuals for Average Highest 
-     Qualifications in Household ',
+     main = 'Fitted vs Residuals Household Land Area',
      abline(h = 0, col = "blue"))
 
 ##dummies /specs 
@@ -655,10 +683,9 @@ highest_level_avgs_lm_poly <- lm(Final_df, formula = sum_profit  ~ highest_level
 
 ggplot(data = Final_df, aes(x = I(total_land_area  ^2), y = sum_profit )) +
   geom_smooth() +
-  xlab("Average of Qualifications Squared") +
+  xlab("Household Land Area Squared") +
   ylab(" Profits by household") +
-  ggtitle("Average Qualifications by 
-          Profits per Household -- Polynomial")
+  ggtitle("Household Land Area Squared -- Polynomial")
 
 
 
