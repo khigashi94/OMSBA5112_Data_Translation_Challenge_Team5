@@ -2,7 +2,6 @@
 # Feifei Jiang, Kristen Higashi, Lynna Tran, Vish Diwan 
 
 
-
 library(tidyverse)
 library(haven)
 library(dplyr)
@@ -67,18 +66,16 @@ crop1 <- agri_plot %>%
 
 
 Cassava_crops <- agri_plot %>% 
-  filter(s8bq12a == 18) %>% 
   select(new_HHID, s8bq12a) %>%
   mutate(cassava = (s8bq12a == 18))  %>% 
-  filter(cassava == TRUE) %>%
+  filter(!is.na(cassava == TRUE)) %>%
   distinct(cassava,new_HHID)
 
 
 Maize_crops <- agri_plot %>% 
-  filter(s8bq12a == 22) %>% 
   select(new_HHID, s8bq12a)  %>%
   mutate(maize = (s8bq12a == 22))  %>% 
-  filter(maize == TRUE) %>%
+  filter(!is.na(maize)) %>%
   distinct(maize,new_HHID)
 
 
@@ -91,20 +88,18 @@ crop2 <- agri_plot %>%
 
 
  Cassava_minor_crop<- agri_plot %>%
-   filter(s8bq12b == 18) %>%
    select(new_HHID, s8bq12b) %>%
    mutate(minor_cassava = (s8bq12b == 18))  %>% 
-   filter(minor_cassava == TRUE) %>%
+   filter(!is.na(minor_cassava)) %>%
    distinct(minor_cassava,new_HHID)
    
 
  Plantain_minor_crop<- agri_plot %>%
-   filter(s8bq12b == 06) %>%
+   ##filter(s8bq12b == 06) %>%
    select(new_HHID, s8bq12b) %>%
    mutate(minor_Plantain = (s8bq12b == 06))  %>% 
-   filter(minor_Plantain == TRUE) %>%
+   filter(!is.na(minor_Plantain)) %>%
    distinct(minor_Plantain,new_HHID)
-
 
 
 
@@ -142,7 +137,6 @@ agri_merge[is.na(agri_merge)]=0
 #education of father, education of mother
 
 
-setwd("OMSBA5112_Data_Translation_Challenge_Team5/Data/glss4_new")
 # household <- read_dta('sec1.dta') 
 # household$new_HHID <- paste(household$clust, household$nh, sep = "_" )
 # ##household$new_PID <- paste(household$clust, household$nh, household$pid, sep = "_" )
@@ -417,29 +411,161 @@ profit_join <- net_join %>%
 
 
 Final_df <- left_join(profit_join, educ_variables, by = "new_HHID")%>%
-  left_join( agri_merge, by = "new_HHID")
+  left_join( agri_merge, by = "new_HHID") %>%
+  mutate(profit_per_area = sum_profit / total_land_area)
+
+Final_df_without_key <- select(Final_df, sum_profit , highest_level_avgs, hh_time_spent_going_to_school_avg 
+                               , highest_qualification_avgs ,hh_educ_expenses_avg , total_land_area ,  hh_plot_area)    
+                                ## cassava , maize , minor_cassava , minor_Plantain)
+
+##trying a corelation matrix
+final_df.cor <- cor(Final_df_without_key)
 
 colnames(Final_df)
 
-final_lm <- lm(Final_df, formula = sum_profit ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
+all_variables_lm <- lm(Final_df, formula = sum_profit ~  highest_level_avgs  + hh_time_spent_going_to_school_avg 
                + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
               cassava + maize + minor_cassava + minor_Plantain)
    
-summary(final_lm)
+
+
+summary(all_variables_lm)
+
+
+siginificant_variables_lm <- lm(Final_df, formula = sum_profit ~  highest_level_avgs  + hh_time_spent_going_to_school_avg 
+                 + total_land_area +  hh_plot_area +  minor_cassava + minor_Plantain)
+
+summary(siginificant_variables_lm )
 
 ##these variables have the highest significant values 
 #3 stars 
 
-##highest_qualification_avgs 
-highest_qualification_profit_lm <- lm(Final_df, formula = sum_profit ~ highest_qualification_avgs)
+##hh_time_spent_going_to_school_avg ######
+time_spent_going_to_school_avg_profit_lm <- lm(Final_df, formula = sum_profit ~  hh_time_spent_going_to_school_avg )
 
-summary(highest_qualification_profit_lm)
+summary(time_spent_going_to_school_avg_profit_lm)
 
-hist(rstandard(highest_qualification_profit_lm ), 
+hist(rstandard((time_spent_going_to_school_avg_profit_lm)), 
+     xlab = "Standardized residuals", main = 'Standardized Residuals
+     of Average Time Spent 
+     Going to School per Household' )
+
+plot(fitted(time_spent_going_to_school_avg_profit_lm ), resid((time_spent_going_to_school_avg_profit_lm) ),
+     xlab = "Fitted", ylab = "Residuals",
+     main = 'Fitted vs Residuals for Average Time
+     Spent Going to School per Household',
+     abline(h = 0, col = "blue"))
+
+##dummies /specs 
+
+time_spent_going_to_school_avg_profit_lm_poly <- lm(Final_df, formula = sum_profit  ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
+                                        + I(hh_time_spent_going_to_school_avg^2) + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
+                                          cassava + maize + minor_cassava + minor_Plantain)
+
+
+ggplot(data = Final_df, aes(x = I(hh_time_spent_going_to_school_avg ^2), y = sum_profit )) +
+  geom_smooth() +
+  xlab("Average of Time Spent Going to School Squared") +
+  ylab(" Profits by household") +
+  ggtitle("Average of Time Spent Going to School by 
+          Profits per Household -- Polynomial")
+
+
+###plot area ######
+hh_plot_area_lm <- lm(Final_df, formula = sum_profit ~  hh_plot_area)
+
+summary(hh_plot_area)
+
+hist(rstandard((hh_plot_area_lm)), 
+     xlab = "Standardized residuals", main = 'Standardized Residuals of 
+     Plot Area per Household' )
+
+plot(fitted(hh_plot_area_lm), resid((hh_plot_area_lm) ),
+     xlab = "Fitted", ylab = "Residuals",
+     main = 'Fitted vs Residuals for Plot Area
+     per Household ',
+     abline(h = 0, col = "blue"))
+
+##dummies /specs 
+
+hh_plot_area_lm_poly <- lm(Final_df, formula = sum_profit  ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
+                                                    + I(hh_plot_area^2) + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
+                                                      cassava + maize + minor_cassava + minor_Plantain)
+
+
+ggplot(data = Final_df, aes(x = I(hh_plot_area ^2), y = sum_profit )) +
+  geom_smooth() +
+  xlab("Plot Area (in acres) Squared") +
+  ylab(" Profits by household") +
+  ggtitle("Plot Area (in Acres) per Household
+          -- Polynomial")
+
+
+##MINOR CASSAVA TRUE ######
+minor_cassava_lm <- lm(Final_df, formula = sum_profit ~ minor_cassava )
+
+summary(minor_cassava_lm)
+
+hist(rstandard(minor_cassava_lm ), 
      xlab = "Standardized residuals", main = 'Standardized Residuals of Average
      Highest Qualification' )
 
-plot(fitted(highest_qualification_profit_lm ), resid(highest_qualification_profit_lm ),
+plot(fitted(minor_cassava_lm ), resid(minor_cassava_lm),
+     xlab = "Fitted", ylab = "Residuals",
+     main = 'Fitted vs Residuals for Average Highest 
+     Qualifications in Household ',
+     abline(h = 0, col = "blue"))
+
+
+
+
+
+##2 stars 
+##highest level avgs, total_land_area 
+
+
+##highest level avgs 
+highest_level_avgs_lm <- lm(Final_df, formula = sum_profit ~   highest_level_avgs )
+
+summary( highest_level_avgs_lm)
+
+hist(rstandard(( highest_level_avgs_lm )), 
+     xlab = "Standardized residuals", main = 'Standardized Residuals of Average
+     Highest Level of Study
+     per Household' )
+
+plot(fitted( highest_level_avgs_lm ), resid(( highest_level_avgs_lm ) ),
+     xlab = "Fitted", ylab = "Residuals",
+     main = 'Fitted vs Residuals for Average
+     Highest Level of Study
+     per Household',
+     abline(h = 0, col = "blue"))
+
+##dummies /specs 
+
+highest_level_avgs_lm_poly <- lm(Final_df, formula = sum_profit  ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
+                                                    + I(hh_time_spent_going_to_school_avg^2) + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
+                                                      cassava + maize + minor_cassava + minor_Plantain)
+
+
+ggplot(data = Final_df, aes(x = I(highest_level_avgs  ^2), y = sum_profit )) +
+  geom_smooth() +
+  xlab("Average of Highest Level per Household Squared") +
+  ylab(" Profits by household") +
+  ggtitle("Average Highest Level of Study by 
+          Profits per Household -- Polynomial")
+
+
+##highest level avgs 
+total_land_area_lm <- lm(Final_df, formula = sum_profit ~   total_land_area)
+
+summary( total_land_area_lm )
+
+hist(rstandard(( total_land_area_lm  )), 
+     xlab = "Standardized residuals", main = 'Standardized Residuals of
+     Land Area per Household' )
+
+plot(fitted( total_land_area_lm  ), resid(( total_land_area_lm  ) ),
      xlab = "Fitted", ylab = "Residuals",
      main = 'Fitted vs Residuals for Average Highest 
      Qualifications in Household ',
@@ -447,13 +573,12 @@ plot(fitted(highest_qualification_profit_lm ), resid(highest_qualification_profi
 
 ##dummies /specs 
 
-highest_qualification_profit_poly <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
-                                        + I(highest_qualification_avgs^2) + highest_qualification_avgs + hh_educ_expenses_avg + totemp + loan_amt + owe_money
-                                        + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid + assets_curr_val +
-                                          total_land_size_ropes_2_acres)
+highest_level_avgs_lm_poly <- lm(Final_df, formula = sum_profit  ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
+                                 + I(hh_time_spent_going_to_school_avg^2) + highest_qualification_avgs + hh_educ_expenses_avg + total_land_area +  hh_plot_area +    
+                                   cassava + maize + minor_cassava + minor_Plantain)
 
 
-ggplot(data = Final_df, aes(x = I(highest_qualification_avgs ^2), y = sum_aggr_inc)) +
+ggplot(data = Final_df, aes(x = I(total_land_area  ^2), y = sum_profit )) +
   geom_smooth() +
   xlab("Average of Qualifications Squared") +
   ylab(" Profits by household") +
@@ -461,101 +586,60 @@ ggplot(data = Final_df, aes(x = I(highest_qualification_avgs ^2), y = sum_aggr_i
           Profits per Household -- Polynomial")
 
 
-##assets_paid  ## feifei
-
-assets_paid_lm <- lm(Final_df, formula = sum_aggr_inc ~ assets_paid)
-
-
-summary(assets_paid_lm)
-
-
-hist(rstandard(assets_paid_lm ), # normal distribution of errors?
-     xlab = "Standardized residuals",  main = 'Standardized Residuals of Assets Paid '
-)
-
-
-plot(fitted(assets_paid_lm ), resid(assets_paid_lm ),
-     xlab = "Fitted", ylab = "Residuals",
-     main = 'Fitted vs Residuals for Assets Paid in Household ',
-     abline(h = 0, col = "blue"))
-
-
-# polynomial
-assets_paid_poly <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs + hh_time_spent_going_to_school_avg
-                       + highest_qualification_avgs + hh_educ_expenses_avg + totemp + loan_amt + owe_money
-                       + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid  + assets_curr_val +
-                         total_land_size_ropes_2_acres)
-
-
-summary(assets_paid_poly )
-
-# polynomial with dummy
-
-assets_paid_poly_dummy <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs + hh_time_spent_going_to_school_avg
-                             + highest_qualification_avgs + hh_educ_expenses_avg + totemp + loan_amt + owe_money
-                             + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid + I(assets_paid ^2) + assets_curr_val +
-                               total_land_size_ropes_2_acres)
-summary(assets_paid_poly_dummy)
-
-
-##2 stars 
-##highest_level_avgs
-##savings_withdrawn 
-
 ##hh_educ_expenses_avg
 ##owe_money
-owe_money_lm <- lm(Final_df, formula = sum_aggr_inc ~ owe_money)
-summary(owe_money_lm)
-hist(rstandard(owe_money_lm ), # normal distribution of errors?
-     xlab = "Standardized residuals", main = 'Standardized Residuals of Owed Money Paid ')
-
-
-plot(fitted(owe_money_lm ), resid(owe_money_lm ),
-     xlab = "Fitted", ylab = "Residuals",
-     main = 'Fitted vs Residuals for Owed Money in Household ',
-     abline(h = 0, col = "blue"))
-# polynomial
-owe_money_poly <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs + hh_time_spent_going_to_school_avg
-                     + highest_qualification_avgs + hh_educ_expenses_avg + totemp + loan_amt + owe_money
-                     + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid  + assets_curr_val +
-                       total_land_size_ropes_2_acres)
-summary(owe_money_poly)
-# polynomial with dummy
-owe_money_poly_dummy <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs + hh_time_spent_going_to_school_avg
-                           + highest_qualification_avgs + hh_educ_expenses_avg + totemp + loan_amt + owe_money + I(owe_money ^2)
-                           + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid + assets_curr_val +
-                             total_land_size_ropes_2_acres)
-summary(owe_money_poly_dummy)
-
-##1 stars 
-##hh_educ_expenses_avg 
-
-avg_educexpenses_profit_lm <- lm(Final_df, formula = sum_aggr_inc ~  hh_educ_expenses_avg)
-
-summary(avg_educexpenses_profit_lm)
-
-hist(rstandard( highest_educexpenses_profit_lm), 
-     xlab = "Standardized residuals", main = 'Standardized Residuals of Average
-     Education Expenses' )
-
-plot(fitted(avg_educexpenses_profit_lm), resid(avg_educexpenses_profit_lm),
-     xlab = "Fitted", ylab = "Residuals",
-     main = 'Fitted vs Residuals for Average Education Expenses
-     in Household ',
-     abline(h = 0, col = "blue"))
-
-##dummies /specs 
-
-avg_educexpenses_profit_poly <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
-                                   + highest_qualification_avgs + hh_educ_expenses_avg + I(hh_educ_expenses_avg^2) +
-                                     totemp + loan_amt + owe_money
-                                   + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid + assets_curr_val +
-                                     total_land_size_ropes_2_acres)
-
-
-ggplot(data = Final_df, aes(x = I(hh_educ_expenses_avg^2), y = sum_aggr_inc)) +
-  geom_smooth() +
-  xlab("Average of Qualifications Squared") +
-  ylab(" Profits by household") +
-  ggtitle("Average Education Expenses per household
-           -- Polynomial")
+# owe_money_lm <- lm(Final_df, formula = sum_aggr_inc ~ owe_money)
+# summary(owe_money_lm)
+# hist(rstandard(owe_money_lm ), # normal distribution of errors?
+#      xlab = "Standardized residuals", main = 'Standardized Residuals of Owed Money Paid ')
+# 
+# 
+# plot(fitted(owe_money_lm ), resid(owe_money_lm ),
+#      xlab = "Fitted", ylab = "Residuals",
+#      main = 'Fitted vs Residuals for Owed Money in Household ',
+#      abline(h = 0, col = "blue"))
+# # polynomial
+# owe_money_poly <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs + hh_time_spent_going_to_school_avg
+#                      + highest_qualification_avgs + hh_educ_expenses_avg + totemp + loan_amt + owe_money
+#                      + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid  + assets_curr_val +
+#                        total_land_size_ropes_2_acres)
+# summary(owe_money_poly)
+# # polynomial with dummy
+# owe_money_poly_dummy <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs + hh_time_spent_going_to_school_avg
+#                            + highest_qualification_avgs + hh_educ_expenses_avg + totemp + loan_amt + owe_money + I(owe_money ^2)
+# #                            + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid + assets_curr_val +
+# #                              total_land_size_ropes_2_acres)
+# # summary(owe_money_poly_dummy)
+# 
+# ##1 stars 
+# ##hh_educ_expenses_avg 
+# 
+# avg_educexpenses_profit_lm <- lm(Final_df, formula = sum_aggr_inc ~  hh_educ_expenses_avg)
+# 
+# summary(avg_educexpenses_profit_lm)
+# 
+# hist(rstandard( highest_educexpenses_profit_lm), 
+#      xlab = "Standardized residuals", main = 'Standardized Residuals of Average
+#      Education Expenses' )
+# 
+# plot(fitted(avg_educexpenses_profit_lm), resid(avg_educexpenses_profit_lm),
+#      xlab = "Fitted", ylab = "Residuals",
+#      main = 'Fitted vs Residuals for Average Education Expenses
+#      in Household ',
+#      abline(h = 0, col = "blue"))
+# 
+# ##dummies /specs 
+# 
+# avg_educexpenses_profit_poly <- lm(Final_df, formula = sum_aggr_inc ~ highest_level_avgs  + hh_time_spent_going_to_school_avg 
+#                                    + highest_qualification_avgs + hh_educ_expenses_avg + I(hh_educ_expenses_avg^2) +
+#                                      totemp + loan_amt + owe_money
+#                                    + loan_paid + savings_val + savings_added + savings_withdrawn + assets_paid + assets_curr_val +
+#                                      total_land_size_ropes_2_acres)
+# 
+# 
+# ggplot(data = Final_df, aes(x = I(hh_educ_expenses_avg^2), y = sum_aggr_inc)) +
+#   geom_smooth() +
+#   xlab("Average of Qualifications Squared") +
+#   ylab(" Profits by household") +
+#   ggtitle("Average Education Expenses per household
+#            -- Polynomial")
