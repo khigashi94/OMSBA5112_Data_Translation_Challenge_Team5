@@ -475,7 +475,7 @@ ggplot(data = Final_df, aes((log(sum_profit))
   ylab("Region") +
   ggtitle("Household Agricultural Profits 
           by Region in Ghana") +
-  geom_boxplot()
+  geom_boxplot() 
 
 #profit by variables,  linear bar graphs 
 
@@ -570,6 +570,7 @@ hist(rstandard((time_spent_going_to_school_avg_profit_lm)),
      xlab = "Standardized residuals", main = 'Standardized Residuals
      of Average Time Spent 
      Going to School per Household' )
+
 
 plot(fitted(time_spent_going_to_school_avg_profit_lm ), resid((time_spent_going_to_school_avg_profit_lm) ),
      xlab = "Fitted", ylab = "Residuals",
