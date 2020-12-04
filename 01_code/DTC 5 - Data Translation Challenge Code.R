@@ -142,28 +142,6 @@ Harvest <- SEC8C1 %>%
   pivot_wider(names_from = market_name 
               , values_from = s8cq6, values_fill = 0, values_fn = sum)
 
-Harvest_TF <- Harvest %>%
- mutate(Pre_harvest_contractor2 = ) 
-
-# as.numeric(Harvest)
-# 
-# Harvest[Harvest!= 0 & H]= 1
-# 
-# Harvest_TF <- Harvest %>%
-#   as.numeric(Harvest$Pre_harvest_contractor) %>%
-#   mutate(Pre_harvest_contractor2 = ifelse(Pre_harvest_contractor == 0 ,FALSE, TRUE)) 
-# 
-# 
-# #     mutate(farm_gate_buyer = ifelse(is.na('Farm gate buyer'), FALSE, TRUE)) %>%
-# #   mutate(market_trader= ifelse(is.na('Market trader'), FALSE, FALSE)) %>%
-# #   mutate(consumer = ifelse(is.na('Consumer'), FALSE, TRUE)) %>%
-# #   mutate(state_trading_org = ifelse(is.na('State trading organisation'), FALSE, TRUE)) %>%
-# #   mutate(co_op = ifelse(is.na('Co-operatives'), FALSE, TRUE)) 
-
-# 
-# 
-
-
 
 
 ### ----------------------------------------------------------------- ###
@@ -476,6 +454,25 @@ ggplot(data = Final_df, aes((log(sum_profit))
   ggtitle("Household Agricultural Profits 
           by Region in Ghana") +
   geom_boxplot() 
+
+#land area by region
+ggplot(data = Final_df, aes(log((total_land_area))
+                            , region_name)) +
+  xlab("Log of Household Land Area (in acres)") +    
+  ylab("Region") +
+  ggtitle("Household Land Area
+          by Region in Ghana") +
+  geom_boxplot() 
+
+#level of study by region 
+ggplot(data = Final_df, aes((highest_level_avgs)
+                            , region_name)) +
+  xlab("Househould Average Level of Study") +    
+  ylab("Region") +
+  ggtitle("Household Average Level of Study
+          by Region in Ghana") +
+  geom_boxplot() 
+
 
 #profit by variables,  linear bar graphs 
 
