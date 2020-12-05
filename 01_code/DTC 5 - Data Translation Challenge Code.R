@@ -1,6 +1,7 @@
 # DATA TRANSLATION GROUP 5 
 # Feifei Jiang, Kristen Higashi, Lynna Tran, Vish Diwan 
 
+#Load Packages -----
 
 library(tidyverse)
 library(haven)
@@ -8,7 +9,7 @@ library(dplyr)
 library(magrittr)
 
 
-############## REGION INFORMATION  #####################
+#Region Information --- 
 
 SEC0A <- read_dta('02_data/SEC0A.dta')
 
@@ -26,9 +27,8 @@ clust_info <- SEC0A %>%
                                  region == 10 ~'Upper West' )) %>%
   distinct(clust, region_name)
 
-#########AGRICULTURE###############
-### ------ load agriculture data and add primary key  ------ ###
-### ------------------------------ ###
+#AGRICULTURE Information  -----
+#load agriculture data and add primary key
 
 agri_land <- read_dta('02_data/sec8a1.dta') 
 agri_land$new_HHID <- paste(agri_land$clust, agri_land$nh, sep="_") 
@@ -38,18 +38,14 @@ agri_plot <- read_dta('02_data/sec8b.dta')
 agri_plot$new_HHID <- paste(agri_plot$clust, agri_plot$nh, sep="_")
 
 
-### ------ agriculture land ------ ###
-### ------------------------------ ###
+#Agriculture Land Variable----
 
 
 land <- select(agri_land, new_HHID, s8aq1, s8aq3, s8aq4, s8aq5) %>%
   mutate(total_land_area = ifelse(agri_land$s8aq3==3, agri_land$s8aq4 * 0.1, agri_land$s8aq4 * 1)) %>%
   filter(!is.na(total_land_area))
 
-
-### -------------------------------------- ###
-### ------ agriculture plot details ------ ###
-### -------------------------------------- ###
+#Agriculture Plot Variable-----
 
 
 plot <- select(agri_plot, new_HHID, s8bq4a, s8bq4b, s8bq5)  %>%
@@ -58,25 +54,33 @@ plot <- select(agri_plot, new_HHID, s8bq4a, s8bq4b, s8bq5)  %>%
   mutate(hh_plot_area = sum(plot_area)) %>%
   distinct(hh_plot_area, new_HHID)
 
-### -------------------------------------- ###
-### ------ popular crop details ------ ###
-### -------------------------------------- ###
-# figure out what crops got planted the most
+#Crop Variable -----
 
-##Minor, but why do you have four different parts for generating what appears to be four crop variables. You should be able to combine all of those, 
-##especially since they all use the same data frame (agri_plot).
+#Review from Professor: Minor, but why do you have four different parts for generating what appears to be four crop variables. You should be able to combine all of those, 
+#especially since they all use the same data frame (agri_plot).
 
-##we separated the crops into 4 crops variables. We took the 4 of most popular crop grown: 2 from first crop planted and 2 from the second crop planted.
-##we wanted to study these as Boolean values, so whether a household grows any of these crops or not. In order to make sure we have separate variable,
-##it was easier for our comprehension to have different sections that manipulate the data differently, even though its from the same dataset. 
+#Answer: we separated the crops into 4 crops variables. We took the 4 of most popular crop grown: 2 from first crop planted and 2 from the second crop planted.
+#we wanted to study these as Boolean values, so whether a household grows any of these crops or not. In order to make sure we have separate variable,
+#it was easier for our comprehension to have different sections that manipulate the data differently, even though its from the same dataset. 
 
+
+# figure out what crops got planted the most in the crop1 column 
+crop1 <- agri_plot %>%
+  select(new_HHID, s8bq12b) %>%
+  count(name = 'count_of_crop', vars = s8bq12a) %>%
+  arrange(desc(count_of_crop))
+
+
+#Cassava and the maize was top 2 in the crop1 column 
+
+#Cassava variable
 Cassava_crops <- agri_plot %>% 
   select(new_HHID, s8bq12a) %>%
   mutate(cassava = (s8bq12a == 18))  %>% 
   filter(cassava == TRUE) %>%
   distinct(cassava, new_HHID)
 
-
+#Maize variable
 Maize_crops <- agri_plot %>% 
   select(new_HHID, s8bq12a)  %>%
   mutate(maize = (s8bq12a == 22))  %>% 
@@ -85,26 +89,29 @@ Maize_crops <- agri_plot %>%
 
 
 # figure out what crops2 got planted the most
+
 crop2 <- agri_plot %>%
   select(new_HHID, s8bq12b) %>%
   count(name = 'count_of_crop', vars = s8bq12b) %>%
   arrange(desc(count_of_crop))
 
+#Cassava and plantain was the top 2 crops in crop2 columns
 
+#Cassava variable form crop2 columns
 Cassava_minor_crop<- agri_plot %>%
   select(new_HHID, s8bq12b) %>%
   mutate(minor_cassava = (s8bq12b == 18))  %>% 
   filter(minor_cassava == TRUE) %>%
   distinct(minor_cassava,new_HHID)
 
-
+#Plantain variable
 Plantain_minor_crop<- agri_plot %>%
   select(new_HHID, s8bq12b) %>%
   mutate(minor_Plantain = (s8bq12b == 06))  %>% 
   filter(minor_Plantain == TRUE) %>%
   distinct(minor_Plantain,new_HHID)
 
-
+#Combined crops variables into one dataset 
 crop_combined <- full_join(Cassava_crops , Maize_crops, by = 'new_HHID') %>%
   full_join(Cassava_minor_crop ,by = 'new_HHID') %>%
   full_join(Plantain_minor_crop ,by = 'new_HHID')
@@ -113,14 +120,25 @@ crop_combined[is.na(crop_combined)]= FALSE
 
 crop_combined <- distinct(crop_combined, new_HHID, cassava, maize ,minor_cassava,  minor_Plantain)
 
-### -------------------------------------- ###
-### ------ local area characteritics ------ ###
-### -------------------------------------- ###
+
+#Combined agriculture land, plot, crops variables into one dataset----
+
+agri_merge <- full_join(land, plot, by = "new_HHID", all.y = TRUE) %>%
+  full_join(crop_combined, by = "new_HHID", all.y = TRUE) %>%
+  select(new_HHID,"total_land_area", "hh_plot_area", 
+         "cassava", "maize", "minor_cassava","minor_Plantain"  )
+
+agri_merge[is.na(agri_merge)]=0
+
+
+#Local area characteristics ----
+
+#Load area information 
 SEC8C1 <- read_dta('02_data/SEC8C1.dta')
 SEC8C1$new_HHID <- paste(SEC8C1$clust, SEC8C1$nh, sep = "_" )
 
 
-########LOCAL CHARACTERISTICS #######
+#Harvest variable that looks at where household members sell their crops. We wanted to keep them as BOOL values
 Harvest <- SEC8C1 %>%
   select(new_HHID, s8cq6) %>%
   filter(!is.na(s8cq6)) %>%
@@ -132,42 +150,21 @@ Harvest <- SEC8C1 %>%
                                  s8cq6 == 5~'State_trading_organisation',
                                  s8cq6 == 6~'Co_operatives'
   )) %>%
-  # mutate(market_name = case_when(s8cq6 == 1 ~'Pre-harvest contractor',
-  #                                s8cq6 == 2 ~'Farm gate buyer',
-  #                                s8cq6 == 3 ~'Market trader',
-  #                                s8cq6 == 4 ~'Consumer',
-  #                                s8cq6 == 5~'State trading organisation',
-  #                                s8cq6 == 6~'Co-operatives'
-  # )) %>%
   pivot_wider(names_from = market_name 
               , values_from = s8cq6, values_fill = 0, values_fn = sum)
 
 
+#Education variables ----
 
-### ----------------------------------------------------------------- ###
-### ------ merged agriculture land + plot + agriculture income ------ ###
-### ----------------------------------------------------------------- ###
-
-agri_merge <- full_join(land, plot, by = "new_HHID", all.y = TRUE) %>%
-  full_join(crop_combined, by = "new_HHID", all.y = TRUE) %>%
-  select(new_HHID,"total_land_area", "hh_plot_area", 
-         "cassava", "maize", "minor_cassava","minor_Plantain"  )
-
-agri_merge[is.na(agri_merge)]=0
-
-
-
-#########Education variables ###########
-
+#Load General Education data 
 ##SEC2A - General Education
 ed_general <- read_dta('02_data/sec2a.dta')
 ed_general$new_HHID <- paste(ed_general$clust, ed_general$nh, sep = "_" )
-##ed_general$new_PID <- paste(ed_general$clust, ed_general$nh, ed_general$pid, sep = "_" )
 
 
-##level_study -
-##getting the average of the highest level of study completed and highest qualification
-##attained per household
+##Level of Study variable 
+#getting the average of the highest level of study completed and highest qualification
+#attained per household
 
 #highest level of study completed and highest qualification attained per individual - data file extraction
 level_study <- ed_general %>%        
@@ -177,29 +174,27 @@ level_study <- ed_general %>%
   rename(highest_level = s2aq2,
          highest_qualification = s2aq3)
 
-
-
-##count of how many individuals per household attained levels of study and qualification 
+#count of how many individuals per household attained levels of study and qualification 
 level_study_hh_count <- count(level_study, vars = new_HHID) %>% 
   rename(new_HHID = vars,
          hh_count = n)
 
-##total of levels of study and qualification per household 
+#total of levels of study and qualification per household 
 level_study_household <- level_study%>%  
   select( new_HHID, highest_level, highest_qualification ) %>%
   group_by(new_HHID) %>%
   summarise(highest_level_totals = sum(highest_level),
             highest_qualification_totals = sum(highest_qualification))
 
-##averages of levels of study and qualifications by dividing totals by household count 
+#averages of levels of study and qualifications by dividing totals by household count 
 level_study_household_avgs <- full_join(level_study_household, level_study_hh_count, by = 'new_HHID') %>% 
   mutate(highest_level_avgs =  highest_level_totals/hh_count) %>%
   mutate(highest_qualification_avgs =  highest_qualification_totals/hh_count)
 
-##time going to school 
-##getting average time a household's individual spends going to school 
+#Time Going to School variable 
+#getting average time a household's individual spends going to school 
 
-##time values extraction from data files 
+#time values extraction from data files 
 time_spent_going_school <- ed_general
 time_spent_going_school[is.na(time_spent_going_school)] <- 0
 
@@ -209,12 +204,12 @@ time_spent_going_school <- time_spent_going_school %>%
   filter(s2aq5a < 24) %>%
   mutate(ptimetotals = (s2aq5a * 60) + s2aq5b)
 
-##household count of how many individuals in the house has records for time spent going to school 
+#household count of how many individuals in the house has records for time spent going to school 
 time_spent_going_school_hh_count <- count(time_spent_going_school, vars = new_HHID) %>%
   rename(new_HHID = vars,
          hh_count = n)
 
-##totals that a household spends going to school 
+#totals that a household spends going to school 
 time_spent_going_school_household <- time_spent_going_school%>%  #time spend going to school *will have to combine hours and minutes into one variable*
   select( new_HHID, ptimetotals) %>%
   group_by(new_HHID) %>%
@@ -226,17 +221,17 @@ time_spent_going_school_averages <- full_join(time_spent_going_school_household 
 
 
 
-######educational expenses #####
-##average education expense for individual per household 
+#Education expenses variables 
+#average education expense for individual per household 
 
-##selecting all education expenses columns 
+#selecting all education expenses columns 
 educ_expenses <- ed_general%>%
   select(clust, nh, s2aq6, s2aq7, s2aq8, s2aq9, s2aq10, s2aq11, s2aq12, s2aq13, s2aq13a)
 
-##changing null values to zero so not to mess up sums 
+#changing null values to zero so not to mess up sums 
 educ_expenses[is.na(educ_expenses)] <- 0
 
-##sums of all education expenses into one total for each individual 
+#sums of all education expenses into one total for each individual 
 educ_expenses_totals <- educ_expenses %>%
   mutate(rowSums(educ_expenses))  %>%
   mutate(totals = rowSums(educ_expenses) - (nh + clust)) %>%
@@ -245,36 +240,32 @@ educ_expenses_totals <- educ_expenses %>%
 
 educ_expenses_totals$new_HHID <- paste(educ_expenses_totals$clust, educ_expenses_totals$nh, sep = "_" )
 
-##household count of how many individual with education expenses
+#household count of how many individual with education expenses
 educ_expenses_hh_count <- count(educ_expenses_totals, vars = new_HHID) %>%
   rename(new_HHID = vars,
          hh_count = n)
 
-##totals that a household spends on education expenses for everyone who has education expenses
+#totals that a household spends on education expenses for everyone who has education expenses
 educ_expenses_totals_household <- educ_expenses_totals%>%  #time spend going to school *will have to combine hours and minutes into one variable*
   select(new_HHID, totals ) %>%
   group_by(new_HHID) %>%
   summarise(household_expenses_totals = sum(totals))
 
-##averages of education expenses by diving totals by household count 
+#averages of education expenses by diving totals by household count 
 educ_expenses_household_avgs <- full_join(educ_expenses_totals_household  , educ_expenses_hh_count, by = 'new_HHID') %>% 
   mutate(hh_educ_expenses_avg =  household_expenses_totals /hh_count)
 
 
-############## COMBINED EDUCATION DATASET  #####################
+# COMBINED EDUCATION DATASET -----
 
 educ_variables <- left_join(time_spent_going_school_averages, level_study_household_avgs, by = "new_HHID") %>%
   left_join(educ_expenses_household_avgs, by = "new_HHID") %>%
   select("new_HHID",  "hh_time_spent_going_to_school_avg",  "highest_level_avgs", "highest_qualification_avgs", "hh_educ_expenses_avg")
 
-
 educ_variables[is.na(educ_variables)]=0
 
-
-
-
-#################### Profit Load Data########################
-
+#Profict Infomation-----
+#Profit Load Data
 
 AGG1 <- read_dta("02_data/aggregates/AGG1.dta")
 AGG1$new_HHID = paste(AGG1$clust, AGG1$nh, sep = "_" )
@@ -302,7 +293,6 @@ SUBAGG10$new_HHID = paste(SUBAGG10$clust, SUBAGG10$nh, sep = "_" )
 SUBAGG10 <- mutate(SUBAGG10, sum_inc_land = rowSums(SUBAGG10[,c('lndinc1', 'lndinc2')]))
 
 
-
 # LIVINC = Income from renting out livestock
 SUBAGG11  <- read_dta("02_data/aggregates/SUBAGG11.dta") 
 SUBAGG11$new_HHID = paste(SUBAGG11$clust, SUBAGG11$nh, sep = "_" )
@@ -313,13 +303,11 @@ SUBAGG12 <- read_dta('02_data/aggregates/SUBAGG12.dta')
 SUBAGG12$new_HHID = paste(SUBAGG12$clust, SUBAGG12$nh, sep = "_" )
 SUBAGG12 <- mutate(SUBAGG12, inc_rent_equip = eqinc)
 
-
 #CRPINC1 = Revenue from sale of cash crops – main outlet
 #CRPINC2 = Revenue from sale of cash crops – other outlet
 SUBAGG13 <- read_dta('02_data/aggregates/SUBAGG13.dta')
 SUBAGG13$new_HHID = paste(SUBAGG13$clust, SUBAGG13$nh, sep = "_" )
 SUBAGG13 <-mutate(SUBAGG13, sum_cash_crops = rowSums(SUBAGG13[,c('crpinc1', 'crpinc2')]))
-
 
 #SUBAGG14 ROOTINC = Revenue from sale of roots/fruit/vegetables
 SUBAGG14 <- read_dta('02_data/aggregates/SUBAGG14.dta')
@@ -336,6 +324,7 @@ SUBAGG16 <- read_dta('02_data/aggregates/SUBAGG16.dta')
 SUBAGG16$new_HHID = paste(SUBAGG16$clust, SUBAGG16$nh, sep = "_" )
 SUBAGG16 <- mutate(SUBAGG16, inc_transformed_crop = trcrpinc)
 
+#Combined income dataset ------
 income <- full_join(AGG1, AGG2, by = 'new_HHID')%>%
   full_join(SUBAGG7, by = 'new_HHID')%>%
   full_join(SUBAGG9, by = 'new_HHID')%>% 
@@ -361,12 +350,9 @@ sum_income <- mutate(sum_income, sum_income_value = rowSums(sum_income) - (nh.x 
 sum_income$new_HHID <- paste(sum_income$clust.x, sum_income$nh.x, sep = "_" )
 
 
+#Expenditures Information ---
 
-
-
-############## Expenditures #####################
-
-
+#Load expenditures information 
 # farmland rent  
 SUBAGG22 <- read_dta("02_data/aggregates/SUBAGG22.dta")
 SUBAGG22$new_HHID <- paste(SUBAGG22$clust, SUBAGG22$nh, sep = "_" )
@@ -381,10 +367,6 @@ SUBAGG23 <- read_dta("02_data/aggregates/SUBAGG23.dta")
 SUBAGG23$new_HHID = paste(SUBAGG23$clust, SUBAGG23$nh, sep = "_" )
 SUBAGG23  <- mutate(SUBAGG23 , exp_crops = -1*expcrop)
 
-
-# %>%
-# SUBAGG23[is.na(expcrop)] <- 0
-
 #livestock inputs
 SUBAGG24 <- read_dta("02_data/aggregates/SUBAGG24.dta")
 SUBAGG24$new_HHID = paste(SUBAGG24$clust, SUBAGG24$nh, sep = "_" )
@@ -396,12 +378,12 @@ SUBAGG25<- read_dta("02_data/aggregates/SUBAGG25.dta")
 SUBAGG25$new_HHID = paste(SUBAGG25$clust, SUBAGG25$nh, sep = "_" )
 SUBAGG25 <- mutate(SUBAGG25, process_cost = -1* rowSums(SUBAGG25[,c('expfdpr1', 'expfdpr2')]))
 
-
 #SUBAGG31 DEPNEQ = Depreciation of farming equipment 
 SUBAGG31 <- read_dta("02_data/aggregates/SUBAGG31.dta")
 SUBAGG31$new_HHID = paste(SUBAGG31$clust, SUBAGG31$nh, sep = "_" )
 SUBAGG31<- mutate(SUBAGG31, equip_depreciation = -1*depneq)
 
+#Combined Expenses variables dataset ----- 
 expenses <- full_join(SUBAGG22, SUBAGG23, by = 'new_HHID')%>%
   full_join(SUBAGG24, by = 'new_HHID')%>%
   full_join(SUBAGG25, by = 'new_HHID')%>% 
@@ -419,8 +401,7 @@ sum_expenses <-  mutate(sum_expenses, sum_expenses_value = rowSums(sum_expenses)
 sum_expenses$new_HHID <- paste(sum_expenses$clust.x, sum_expenses$nh.x, sep = "_" )
 
 
-
-############## NET INCOME FINAL JOIN AND TABLE #####################
+# Profit Variable from combining Income and Expenses datasets -----
 
 net_join <- left_join(sum_income, sum_expenses, by = 'new_HHID')
 
@@ -431,10 +412,7 @@ profit_join <- net_join %>%
   select(new_HHID, sum_income_value, sum_expenses_value, sum_profit)
 
 
-
-
-
-############## COMBINED DATASET  #####################
+#COMBINED DATASET from all sections: region, profit, education, agriculture, and local variables -------
 
 Final_df <- left_join(profit_join, educ_variables, by = "new_HHID")%>%
   left_join( agri_merge, by = "new_HHID") %>%
@@ -443,6 +421,9 @@ Final_df <- left_join(profit_join, educ_variables, by = "new_HHID")%>%
   left_join(clust_info,  by = 'clust') %>%
   mutate(profit_per_land = if_else(total_land_area != 0, (sum_profit / total_land_area), 0)) %>%
  mutate(profit_per_plot = if_else(hh_plot_area != 0, (sum_profit / hh_plot_area), 0))
+
+#Now that that a dataset has been tidyed and has all of our variables we want to research,
+#we can start visualizing them and running models 
 
 ####DATA VISUALISATION PLOTS -----
 #profit by region
